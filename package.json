@@ -1,0 +1,20 @@
+{
+  "name": "ai-workforce-managment-and-role-fitment-platform",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/lalitcm11-web/Ai-Workforce-Managment-and-Role-Fitment-Platform#readme",
+  "bugs": {
+    "url": "https://github.com/lalitcm11-web/Ai-Workforce-Managment-and-Role-Fitment-Platform/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lalitcm11-web/Ai-Workforce-Managment-and-Role-Fitment-Platform.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
