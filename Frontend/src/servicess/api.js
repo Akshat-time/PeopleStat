@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000/api"; // backend team will confirm later
+const API_BASE_URL = "http://localhost:5001/api"; // backend team will confirm later
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -8,6 +8,7 @@ export const api = axios.create({
 });
 
 // Admin APIs
+export const fetchEmployees = () => api.get("/employees");
 export const fetchEmployeeStats = () => api.get("/employees/stats");
 export const fetchUploads = () => api.get("/uploads");
 

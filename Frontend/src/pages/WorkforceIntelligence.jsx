@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
 import {
   Brain,
   TrendingUp,
@@ -20,150 +21,127 @@ import {
   Award,
   ChevronRight,
 } from "lucide-react";
-
-// Mock data for Workforce Intelligence
-const kpiMetrics = [
-  {
-    title: "Total Workforce",
-    value: "1,247",
-    change: "+2.4%",
-    changeType: "up",
-    icon: Users,
-    color: "blue",
-  },
-  {
-    title: "Avg Performance Score",
-    value: "84.2",
-    change: "+5.1%",
-    changeType: "up",
-    icon: Target,
-    color: "green",
-  },
-  {
-    title: "AI Insights Generated",
-    value: "1,429",
-    change: "+12.8%",
-    changeType: "up",
-    icon: Brain,
-    color: "purple",
-  },
-  {
-    title: "Optimization Potential",
-    value: "$2.8M",
-    change: "+8.3%",
-    changeType: "up",
-    icon: DollarSign,
-    color: "orange",
-  },
-];
-
-const aiInsights = [
-  {
-    type: "critical",
-    title: "Critical Skills Gap Detected",
-    description: "Data Science team needs 8 senior ML engineers within 6 months",
-    impact: "High",
-    action: "View Hiring Plan",
-    icon: AlertTriangle,
-  },
-  {
-    type: "opportunity",
-    title: "Automation Ready Processes",
-    description: "Invoice processing can save 45 FTE hours weekly",
-    impact: "Medium",
-    action: "Start Implementation",
-    icon: Zap,
-  },
-  {
-    type: "success",
-    title: "Performance Optimization",
-    description: "Engineering productivity increased 18% after team restructuring",
-    impact: "High",
-    action: "View Details",
-    icon: CheckCircle,
-  },
-];
-
-const departmentOverview = [
-  {
-    name: "Engineering",
-    headcount: 342,
-    performance: 87,
-    utilization: 92,
-    risk: "Low",
-    trend: "up",
-  },
-  {
-    name: "Product",
-    headcount: 156,
-    performance: 82,
-    utilization: 88,
-    risk: "Medium",
-    trend: "up",
-  },
-  {
-    name: "Sales",
-    headcount: 203,
-    performance: 91,
-    utilization: 95,
-    risk: "Low",
-    trend: "up",
-  },
-  {
-    name: "Marketing",
-    headcount: 98,
-    performance: 78,
-    utilization: 85,
-    risk: "High",
-    trend: "down",
-  },
-  {
-    name: "Support",
-    headcount: 187,
-    performance: 76,
-    utilization: 89,
-    risk: "High",
-    trend: "down",
-  },
-  {
-    name: "Finance",
-    headcount: 89,
-    performance: 85,
-    utilization: 87,
-    risk: "Low",
-    trend: "stable",
-  },
-];
-
-const predictiveInsights = [
-  {
-    title: "Attrition Risk",
-    value: "23 employees",
-    description: "High probability of leaving in next 3 months",
-    color: "red",
-  },
-  {
-    title: "Promotion Ready",
-    value: "47 employees",
-    description: "Ready for advancement opportunities",
-    color: "green",
-  },
-  {
-    title: "Training Needs",
-    value: "156 employees",
-    description: "Require skill development in next quarter",
-    color: "yellow",
-  },
-  {
-    title: "Workload Imbalance",
-    value: "12 teams",
-    description: "Resource redistribution recommended",
-    color: "blue",
-  },
-];
+import { useLocation } from "wouter";
+import { employees as centralEmployees } from "@/data/mockEmployeeData";
 
 export default function WorkforceIntelligence() {
-  const [selectedInsight, setSelectedInsight] = useState(null);
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  const kpiMetrics = useMemo(() => {
+    const avgPerf = centralEmployees.reduce((sum, e) => sum + e.scores.productivity, 0) / centralEmployees.length;
+    return [
+      {
+        title: "Total Workforce",
+        value: centralEmployees.length.toLocaleString(),
+        change: "+2.4%",
+        changeType: "up",
+        icon: Users,
+        color: "blue",
+      },
+      {
+        title: "Avg Performance Score",
+        value: avgPerf.toFixed(1),
+        change: "+5.1%",
+        changeType: "up",
+        icon: Target,
+        color: "green",
+      },
+      {
+        title: "Utilization Rate",
+        value: `${(centralEmployees.reduce((sum, e) => sum + e.scores.utilization, 0) / centralEmployees.length).toFixed(1)}%`,
+        change: "+12.8%",
+        changeType: "up",
+        icon: Activity,
+        color: "purple",
+      },
+      {
+        title: "Salary Asset Value",
+        value: `$${(centralEmployees.reduce((sum, e) => sum + e.salary, 0) / 1000000).toFixed(1)}M`,
+        change: "+8.3%",
+        changeType: "up",
+        icon: DollarSign,
+        color: "orange",
+      },
+    ];
+  }, []);
+
+  const departmentOverview = useMemo(() => {
+    const depts = [...new Set(centralEmployees.map(e => e.department))];
+    return depts.map(dept => {
+      const emps = centralEmployees.filter(e => e.department === dept);
+      const perf = Math.round(emps.reduce((sum, e) => sum + e.scores.productivity, 0) / emps.length);
+      const utils = Math.round(emps.reduce((sum, e) => sum + e.scores.utilization, 0) / emps.length);
+      const riskCount = emps.filter(e => e.scores.fatigue > 75).length;
+      return {
+        name: dept,
+        headcount: emps.length,
+        performance: perf,
+        utilization: utils,
+        risk: riskCount > 2 ? "High" : riskCount > 0 ? "Medium" : "Low",
+      };
+    }).sort((a, b) => b.performance - a.performance);
+  }, []);
+
+  const predictiveInsights = useMemo(() => {
+    const attrRisk = centralEmployees.filter(e => e.scores.fatigue > 85).length;
+    const promoReady = centralEmployees.filter(e => e.scores.fitment > 90 && e.scores.productivity > 85).length;
+    const trainingNeeds = centralEmployees.filter(e => e.scores.fitment < 70).length;
+
+    return [
+      {
+        title: "Attrition Risk",
+        value: `${attrRisk} employees`,
+        description: "High burnout/fatigue levels detected",
+        color: "red",
+      },
+      {
+        title: "Promotion Ready",
+        value: `${promoReady} employees`,
+        description: "High fitment and performance scores",
+        color: "green",
+      },
+      {
+        title: "Training Needs",
+        value: `${trainingNeeds} employees`,
+        description: "Fitment gaps requiring intervention",
+        color: "yellow",
+      },
+      {
+        title: "Workload Imbalance",
+        value: `${departmentOverview.filter(d => d.utilization > 90).length} departments`,
+        description: "Utilization exceeding 90% threshold",
+        color: "blue",
+      },
+    ];
+  }, [departmentOverview]);
+
+  const aiInsights = [
+    {
+      type: "critical",
+      title: "Skill Gap Alert",
+      description: `Detected ${predictiveInsights[2].value} requiring immediate training in core competencies.`,
+      impact: "High",
+      action: "View Hiring Plan",
+      icon: AlertTriangle,
+    },
+    {
+      type: "opportunity",
+      title: "Utilization Optimization",
+      description: "Excess capacity found in Finance; redistribution could save 15% in operational costs.",
+      impact: "Medium",
+      action: "Start Implementation",
+      icon: Zap,
+    },
+    {
+      type: "success",
+      title: "Productivity Milestone",
+      description: `Overall workforce performance is up by 5.1% compared to last quarter.`,
+      impact: "High",
+      action: "View Details",
+      icon: CheckCircle,
+    },
+  ];
 
   const getRiskColor = (risk) => {
     switch (risk) {
@@ -196,7 +174,6 @@ export default function WorkforceIntelligence() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter']">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
         <div className="text-center">
           <h1 className="text-4xl font-semibold text-[#0F172A] mb-2">Workforce Intelligence</h1>
           <p className="text-lg text-[#64748B]">AI-powered workforce analytics and optimization insights</p>
@@ -207,22 +184,19 @@ export default function WorkforceIntelligence() {
           {kpiMetrics.map((metric, index) => (
             <Card key={index} className="p-6 bg-white border-[#E5E7EB] rounded-xl shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl ${
-                  metric.color === 'blue' ? 'bg-blue-100' :
+                <div className={`p-3 rounded-xl ${metric.color === 'blue' ? 'bg-blue-100' :
                   metric.color === 'green' ? 'bg-green-100' :
-                  metric.color === 'purple' ? 'bg-purple-100' :
-                  'bg-orange-100'
-                }`}>
-                  <metric.icon className={`h-6 w-6 ${
-                    metric.color === 'blue' ? 'text-blue-600' :
+                    metric.color === 'purple' ? 'bg-purple-100' :
+                      'bg-orange-100'
+                  }`}>
+                  <metric.icon className={`h-6 w-6 ${metric.color === 'blue' ? 'text-blue-600' :
                     metric.color === 'green' ? 'text-green-600' :
-                    metric.color === 'purple' ? 'text-purple-600' :
-                    'text-orange-600'
-                  }`} />
+                      metric.color === 'purple' ? 'text-purple-600' :
+                        'text-orange-600'
+                    }`} />
                 </div>
-                <Badge className={`text-xs font-medium ${
-                  metric.changeType === 'up' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
+                <Badge className={`text-xs font-medium ${metric.changeType === 'up' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
                   {metric.changeType === 'up' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                   {metric.change}
                 </Badge>
@@ -243,20 +217,27 @@ export default function WorkforceIntelligence() {
               <Card key={index} className={`p-6 border-2 rounded-xl shadow-sm hover:shadow-md transition-shadow ${getInsightColor(insight.type)}`}>
                 <div className="flex items-start gap-4">
                   <div className={`p-3 rounded-xl bg-white shadow-sm`}>
-                    <insight.icon className={`h-6 w-6 ${
-                      insight.type === 'critical' ? 'text-red-600' :
+                    <insight.icon className={`h-6 w-6 ${insight.type === 'critical' ? 'text-red-600' :
                       insight.type === 'opportunity' ? 'text-blue-600' :
-                      'text-green-600'
-                    }`} />
+                        'text-green-600'
+                      }`} />
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-[#0F172A] mb-2">{insight.title}</h3>
-                    <p className="text-[#64748B] mb-4">{insight.description}</p>
+                    <p className="text-[#64748B] mb-4 text-sm">{insight.description}</p>
                     <div className="flex items-center justify-between">
                       <Badge variant="outline" className="text-xs">
                         {insight.impact} Impact
                       </Badge>
-                      <Button variant="ghost" size="sm" className="text-[#2563EB] hover:text-[#1D4ED8]">
+                      <Button variant="ghost" size="sm" className="text-[#2563EB] hover:text-[#1D4ED8]" onClick={() => {
+                        if (insight.action === "View Hiring Plan") navigate("/gap-analysis");
+                        else if (insight.action === "Start Implementation") {
+                          toast({
+                            title: "Implementation Started",
+                            description: "Automation process has been initiated.",
+                          });
+                        } else if (insight.action === "View Details") navigate("/employees");
+                      }}>
                         {insight.action}
                         <ChevronRight className="h-4 w-4 ml-1" />
                       </Button>
@@ -289,14 +270,14 @@ export default function WorkforceIntelligence() {
                   </div>
                   <div>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-[#64748B]">Performance</span>
+                      <span className="text-[#64748B]">Performance Score</span>
                       <span className="font-medium text-[#0F172A]">{dept.performance}%</span>
                     </div>
                     <Progress value={dept.performance} className="h-2" />
                   </div>
                   <div>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-[#64748B]">Utilization</span>
+                      <span className="text-[#64748B]">Resource Utilization</span>
                       <span className="font-medium text-[#0F172A]">{dept.utilization}%</span>
                     </div>
                     <Progress value={dept.utilization} className="h-2" />
@@ -332,11 +313,11 @@ export default function WorkforceIntelligence() {
               and maximize organizational productivity through data-driven insights.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="bg-white text-[#2563EB] hover:bg-gray-100 px-8 py-3 text-lg font-semibold">
+              <Button className="bg-white text-[#2563EB] hover:bg-gray-100 px-8 py-3 text-lg font-semibold" onClick={() => toast({ title: "Generating Report", description: "Advanced AI analysis in progress..." })}>
                 <Brain className="h-5 w-5 mr-2" />
                 Generate AI Report
               </Button>
-              <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#2563EB] px-8 py-3 text-lg font-semibold">
+              <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#2563EB] px-8 py-3 text-lg font-semibold" onClick={() => navigate("/")}>
                 <BarChart3 className="h-5 w-5 mr-2" />
                 View Analytics Dashboard
               </Button>

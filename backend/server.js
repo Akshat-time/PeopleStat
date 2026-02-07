@@ -15,8 +15,10 @@ app.use(cors());
 
 // MongoDB Connection
 mongoose
-  .connect(process.env.MONGO_URI)
-
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log("✅ MongoDB Connected Successfully!"))
   .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
@@ -29,10 +31,12 @@ app.get("/", (req, res) => {
 import authRoutes from "./routes/authRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/settings", settingsRoutes);
 
 // Server Running
 const PORT = process.env.PORT || 5001;

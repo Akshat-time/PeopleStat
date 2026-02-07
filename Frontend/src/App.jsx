@@ -35,10 +35,12 @@ import UploadData from "./pages/UploadData.jsx";
 import Settings from "./pages/Settings.jsx";
 import Documentation from "./pages/Documentation.jsx";
 import AiEmployeeAssistant from "./pages/AiEmployeeAssistant.jsx";
+import EmployeeDashboard from "./pages/EmployeeDashboard.jsx";
 
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import NotFound from "./pages/not-found.jsx";
+import EmployeeDataForm from "./pages/employee/EmployeeDataForm.jsx";
 
 /* ---------------- PROTECTED ROUTES ---------------- */
 
@@ -70,7 +72,7 @@ function ProtectedRoute({ component: Component }) {
   return <Component />;
 }
 
-function AdminRoute({ component: Component }) {
+function ManagerRoute({ component: Component }) {
   const { user, isLoading } = useAuth();
   const [, navigate] = useLocation();
 
@@ -83,13 +85,13 @@ function AdminRoute({ component: Component }) {
 
   if (!user) return null;
 
-  if (user.role !== "admin") {
+  if (user.role !== "manager") {
     return (
       <div className="flex items-center justify-center h-screen text-center">
         <div>
           <h1 className="text-2xl font-semibold">Access Denied</h1>
           <p className="text-muted-foreground">
-            Admin access required
+            Manager access required
           </p>
         </div>
       </div>
@@ -107,17 +109,22 @@ function AppRouter() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
 
-      <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/employees" component={() => <ProtectedRoute component={Employees} />} />
+      <Route path="/" component={() => (
+        <ProtectedRoute component={() => {
+          const { user } = useAuth();
+          return user.role === "manager" ? <Dashboard /> : <EmployeeDashboard />;
+        }} />
+      )} />
+      <Route path="/employees" component={() => <ManagerRoute component={Employees} />} />
       <Route path="/fitment" component={() => <ProtectedRoute component={FitmentAnalysis} />} />
       <Route path="/softskills" component={() => <ProtectedRoute component={Softskills} />} />
       <Route path="/fatigue" component={() => <ProtectedRoute component={Fatigue} />} />
-      <Route path="/workforce-intelligence" component={() => <WorkforceIntelligence />} />
+      <Route path="/workforce-intelligence" component={() => <ManagerRoute component={WorkforceIntelligence} />} />
 
       {/* ✅ THIS ONE */}
       <Route
         path="/gap-analysis"
-        component={() => <ProtectedRoute component={GapAnalysis} />}
+        component={() => <ManagerRoute component={GapAnalysis} />}
       />
 
       <Route
@@ -127,8 +134,14 @@ function AppRouter() {
 
       <Route
         path="/six-by-six"
-        component={() => <ProtectedRoute component={SixBySixAnalysis} />}
+        component={() => <ManagerRoute component={SixBySixAnalysis} />}
       />
+      <Route path="/optimization" component={() => <ManagerRoute component={Optimization} />} />
+      <Route path="/analytics" component={() => <ManagerRoute component={Analytics} />} />
+      <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+      <Route path="/documentation" component={() => <ProtectedRoute component={Documentation} />} />
+      <Route path="/employee/data-form" component={() => <ProtectedRoute component={EmployeeDataForm} />} />
+
 
       <Route component={NotFound} />
     </Switch>
@@ -165,7 +178,7 @@ function AppContent() {
                 </div>
                 {user && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                    {user.role === "admin" ? "Manager Portal" : "Employee Portal"}
+                    {user.role === "manager" ? "Manager Portal" : "Employee Portal"}
                   </span>
                 )}
               </div>
