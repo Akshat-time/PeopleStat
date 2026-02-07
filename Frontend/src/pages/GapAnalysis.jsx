@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -27,52 +28,7 @@ import {
   Search,
   Download,
 } from "lucide-react";
-
-/* ---------------- MOCK DATA ---------------- */
-
-const employees = [
-  {
-    id: 1,
-    name: "Raviteja",
-    role: "Business Development",
-    department: "Sales",
-    gaps: 2,
-    severity: "High",
-    aiScore: 62,
-  },
-  {
-    id: 2,
-    name: "Anjali Verma",
-    role: "Frontend Developer",
-    department: "Engineering",
-    gaps: 1,
-    severity: "Low",
-    aiScore: 88,
-  },
-  {
-    id: 3,
-    name: "Rahul Sharma",
-    role: "Data Analyst",
-    department: "Analytics",
-    gaps: 3,
-    severity: "Medium",
-    aiScore: 71,
-  },
-];
-
-const barData = [
-  { name: "Raviteja", gaps: 2 },
-  { name: "Anjali", gaps: 1 },
-  { name: "Rahul", gaps: 3 },
-];
-
-const donutData = [
-  { name: "High", value: 1 },
-  { name: "Medium", value: 1 },
-  { name: "Low", value: 1 },
-];
-
-const COLORS = ["#ef4444", "#f59e0b", "#22c55e"];
+import { employees as centralEmployees, getFitmentBand } from "@/data/mockEmployeeData";
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -80,21 +36,63 @@ export default function GapAnalysis() {
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
-  const filteredEmployees = employees.filter(
-    (e) =>
-      e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.role.toLowerCase().includes(search.toLowerCase())
-  );
+  const employeesWithGaps = useMemo(() => {
+    return centralEmployees.filter(e => e.scores.fitment < 85).map(e => {
+      let severity = "Low";
+      let gapCount = 1;
+      if (e.scores.fitment < 50) {
+        severity = "High";
+        gapCount = 4;
+      } else if (e.scores.fitment < 75) {
+        severity = "Medium";
+        gapCount = 2;
+      }
+      return { ...e, severity, gapCount };
+    });
+  }, []);
+
+  const filteredEmployees = useMemo(() => {
+    return employeesWithGaps.filter(
+      (e) =>
+        e.name.toLowerCase().includes(search.toLowerCase()) ||
+        e.position.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search, employeesWithGaps]);
+
+  const barData = useMemo(() => {
+    return filteredEmployees.slice(0, 10).map(e => ({ name: e.name.split(' ')[0], gaps: e.gapCount }));
+  }, [filteredEmployees]);
+
+  const donutData = useMemo(() => {
+    const counts = { "High": 0, "Medium": 0, "Low": 0 };
+    employeesWithGaps.forEach(e => counts[e.severity]++);
+    return [
+      { name: "High", value: counts["High"] },
+      { name: "Medium", value: counts["Medium"] },
+      { name: "Low", value: counts["Low"] },
+    ];
+  }, [employeesWithGaps]);
+
+  const COLORS = ["#ef4444", "#f59e0b", "#10b981"];
+
+  const getSeverityVariant = (severity) => {
+    switch (severity) {
+      case "High": return "destructive";
+      case "Medium": return "secondary";
+      case "Low": return "outline";
+      default: return "default";
+    }
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6 font-['Inter']">
 
       {/* HEADER */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Gap Analysis</h1>
           <p className="text-muted-foreground">
-            Skill, performance & development gaps across employees
+            Skill, performance & development gaps across {centralEmployees.length} employees
           </p>
         </div>
 
@@ -119,7 +117,7 @@ export default function GapAnalysis() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Gap Count by Employee</CardTitle>
+            <CardTitle>Gap Count by Employee (Top 10)</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -145,6 +143,7 @@ export default function GapAnalysis() {
                   dataKey="value"
                   innerRadius={60}
                   outerRadius={90}
+                  paddingAngle={5}
                 >
                   {donutData.map((_, i) => (
                     <Cell key={i} fill={COLORS[i]} />
@@ -167,35 +166,35 @@ export default function GapAnalysis() {
             <thead className="bg-muted">
               <tr>
                 <th className="p-3 text-left">Employee</th>
-                <th className="p-3">Role</th>
-                <th className="p-3">Skill Gaps</th>
-                <th className="p-3">Severity</th>
-                <th className="p-3">AI Confidence</th>
-                <th className="p-3">Action</th>
+                <th className="p-3 text-left">Role</th>
+                <th className="p-3 text-center">Gaps</th>
+                <th className="p-3 text-center">Severity</th>
+                <th className="p-3 text-center">Fitment Score</th>
+                <th className="p-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredEmployees.map((e) => (
-                <tr key={e.id} className="border-b">
-                  <td className="p-3 font-medium">{e.name}</td>
-                  <td className="p-3">{e.role}</td>
-                  <td className="p-3">{e.gaps}</td>
+                <tr key={e.employeeId} className="border-b hover:bg-muted/50 transition-colors">
                   <td className="p-3">
-                    <Badge
-                      variant={
-                        e.severity === "High"
-                          ? "destructive"
-                          : e.severity === "Medium"
-                          ? "secondary"
-                          : "default"
-                      }
-                    >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
+                        {e.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <span className="font-medium">{e.name}</span>
+                    </div>
+                  </td>
+                  <td className="p-3 text-muted-foreground">{e.position}</td>
+                  <td className="p-3 text-center font-bold">{e.gapCount}</td>
+                  <td className="p-3 text-center">
+                    <Badge variant={getSeverityVariant(e.severity)}>
                       {e.severity}
                     </Badge>
                   </td>
-                  <td className="p-3">{e.aiScore}%</td>
-                  <td className="p-3">
+                  <td className="p-3 text-center font-medium">{e.scores.fitment}%</td>
+                  <td className="p-3 text-center">
                     <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => setSelectedEmployee(e)}
                     >
@@ -209,12 +208,12 @@ export default function GapAnalysis() {
         </CardContent>
       </Card>
 
-      {/* FULL EMPLOYEE DETAIL (EXACT LIKE 2nd IMAGE STRUCTURE) */}
+      {/* DETAILS DIALOG */}
       <Dialog
         open={!!selectedEmployee}
         onOpenChange={() => setSelectedEmployee(null)}
       >
-        <DialogContent className="max-w-6xl h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedEmployee && (
             <EmployeeDetail employee={selectedEmployee} />
           )}
@@ -228,68 +227,82 @@ export default function GapAnalysis() {
 
 function EmployeeDetail({ employee }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-2">
+      <div className="flex items-center gap-6">
+        <div className="h-20 w-20 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-2xl font-bold text-blue-600">
+          {employee.name[0]}
+        </div>
 
-      {/* HEADER CARD */}
-      <Card>
-        <CardContent className="flex items-center gap-6 py-6">
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-xl font-bold">
-            {employee.name[0]}
+        <div className="flex-1">
+          <h2 className="text-2xl font-bold">{employee.name}</h2>
+          <p className="text-lg text-muted-foreground">{employee.position}</p>
+          <div className="flex gap-2 mt-2">
+            <Badge variant="outline">{employee.department}</Badge>
+            <Badge variant="outline">{employee.employeeId}</Badge>
           </div>
-
-          <div className="flex-1">
-            <h2 className="text-xl font-bold">{employee.name}</h2>
-            <p className="text-muted-foreground">{employee.role}</p>
-            <p className="text-sm text-muted-foreground">
-              {employee.department}
-            </p>
-          </div>
-
-          <Button>Edit Profile</Button>
-        </CardContent>
-      </Card>
-
-      {/* TABS (VISUAL ONLY FOR NOW) */}
-      <div className="flex gap-3 border-b pb-2 text-sm">
-        <span className="font-semibold border-b-2 border-primary pb-2">
-          Skills & Performance
-        </span>
-        <span className="text-muted-foreground">Development & Goals</span>
-        <span className="text-muted-foreground">Team Assignment</span>
+        </div>
       </div>
 
-      {/* SKILL GAP SECTION */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-red-50/50 border-red-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-red-800 uppercase">Fitment Gap</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-red-600">-{100 - employee.scores.fitment}%</p>
+            <p className="text-xs text-red-600/70 mt-1">Below target baseline</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-blue-50/50 border-blue-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-800 uppercase">Productivity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-blue-600">{employee.scores.productivity}%</p>
+            <p className="text-xs text-blue-600/70 mt-1">Consistency score</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-purple-50/50 border-purple-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-purple-800 uppercase">Fatigue Risk</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-purple-600">{employee.scores.fatigue}%</p>
+            <p className="text-xs text-purple-600/70 mt-1">Stress exposure</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Skill Gaps for Upskilling</CardTitle>
+          <CardTitle>Skill Gap Analysis</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>• Technical Skill Gaps</p>
-          <p>• Soft Skill Gaps</p>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="font-medium">Technical Competency</span>
+              <span className="text-muted-foreground">{employee.scores.fitment}% Matching</span>
+            </div>
+            <Progress value={employee.scores.fitment} className="h-2" />
+          </div>
+
+          <div className="space-y-4 pt-4 border-t">
+            <h4 className="font-semibold text-sm">Recommended Interventions</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 rounded-lg border bg-muted/30">
+                <p className="font-medium text-sm">Focused Upskilling</p>
+                <p className="text-xs text-muted-foreground mt-1">Complete advanced {employee.position} certification.</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-muted/30">
+                <p className="font-medium text-sm">Peer Mentorship</p>
+                <p className="text-xs text-muted-foreground mt-1">Pair with a High-Fitment {employee.position}.</p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      {/* PERFORMANCE CATEGORIES */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Performance Categories</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div className="border rounded-lg p-4">
-            <p className="font-semibold">Communication</p>
-            <p className="text-muted-foreground">Needs improvement</p>
-          </div>
-          <div className="border rounded-lg p-4">
-            <p className="font-semibold">Teamwork</p>
-            <p className="text-muted-foreground">Average</p>
-          </div>
-          <div className="border rounded-lg p-4">
-            <p className="font-semibold">Adaptability</p>
-            <p className="text-muted-foreground">Good</p>
-          </div>
-        </CardContent>
-      </Card>
-
     </div>
   );
 }

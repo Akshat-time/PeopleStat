@@ -1,285 +1,224 @@
-export const mockEmployees = [
+/* ================= EMPLOYEE DATA ================= */
+
+export const employees = [
   {
-    userid: "EMP001",
+    employeeId: "EMP001",
     name: "Ramesh Kumar",
     email: "ramesh.kumar@company.com",
-    salary: 85000,
-    joiningDate: "2019-03-15",
     department: "Finance",
     position: "Senior Analyst",
     currentRole: "Financial Analyst",
     recommendedRole: "Senior Financial Analyst",
-    fitmentScore: 6.8,
-    productivity: 72,
-    utilization: 85,
+    salary: 85000,
+    joiningDate: "2019-03-15",
+    scores: {
+      fitment: 68,
+      productivity: 72,
+      utilization: 85,
+      fatigue: 45,
+      aptitude: 82,
+      skill: 78,
+      automationPotential: 78,
+    },
+    experienceYears: 6.2,
     processes: [
-      { name: "Vendor Reconciliation", hours: 90, output: "Monthly reports", repetitiveScore: 85 },
-      { name: "Monthly Close", hours: 40, output: "Financial statements", repetitiveScore: 60 },
-      { name: "Budget Analysis", hours: 30, output: "Budget reports", repetitiveScore: 45 },
+      { name: "Vendor Reconciliation", hours: 90, repetitiveScore: 85 },
+      { name: "Monthly Close", hours: 40, repetitiveScore: 60 },
+      { name: "Budget Analysis", hours: 30, repetitiveScore: 45 },
     ],
     skills: {
       soft: ["Communication", "Time Management", "Attention to Detail"],
       hard: ["Excel", "SQL", "SAP", "Financial Modeling"],
     },
-    skillScore: 78,
-    aptitudeScore: 82,
-    consolidated: true,
-    consolidatedCount: 120,
-    nonConsolidatedCount: 40,
-    automationPotential: 78,
-    experienceYears: 6.2,
+    history: {
+      productivity: [
+        { month: "Jun", value: 68 }, { month: "Jul", value: 71 }, { month: "Aug", value: 73 },
+        { month: "Sep", value: 70 }, { month: "Oct", value: 74 }, { month: "Nov", value: 72 },
+      ],
+    },
     documents: [
-      { name: "Performance Review Q4 2024.pdf", type: "Review", uploadDate: "2024-12-15" },
-      { name: "Certification - Advanced Excel.pdf", type: "Certificate", uploadDate: "2024-06-20" },
+      { name: "Performance Review Q4 2024.pdf", type: "Review" },
+      { name: "Advanced Excel Certification.pdf", type: "Certificate" },
     ],
-    productivityHistory: [
-      { month: "Jun", value: 68 },
-      { month: "Jul", value: 71 },
-      { month: "Aug", value: 73 },
-      { month: "Sep", value: 70 },
-      { month: "Oct", value: 74 },
-      { month: "Nov", value: 72 },
-    ],
-    fatigueScore: 45,
     tags: ["automation-candidate", "high-potential"],
-    notes: [],
   },
   {
-    userid: "EMP002",
+    employeeId: "EMP002",
     name: "Priya Sharma",
     email: "priya.sharma@company.com",
-    salary: 95000,
-    joiningDate: "2017-08-10",
     department: "IT",
     position: "Team Lead",
     currentRole: "Development Team Lead",
     recommendedRole: "Engineering Manager",
-    fitmentScore: 8.9,
-    productivity: 91,
-    utilization: 88,
+    salary: 95000,
+    joiningDate: "2017-08-10",
+    scores: {
+      fitment: 89,
+      productivity: 91,
+      utilization: 88,
+      fatigue: 28,
+      aptitude: 88,
+      skill: 92,
+      automationPotential: 35,
+    },
+    experienceYears: 8.5,
     processes: [
-      { name: "Code Review", hours: 60, output: "Quality gates", repetitiveScore: 40 },
-      { name: "Sprint Planning", hours: 20, output: "Sprint backlog", repetitiveScore: 30 },
-      { name: "Architecture Design", hours: 80, output: "Technical specs", repetitiveScore: 20 },
+      { name: "Code Review", hours: 60, repetitiveScore: 40 },
+      { name: "Sprint Planning", hours: 20, repetitiveScore: 30 },
+      { name: "Architecture Design", hours: 80, repetitiveScore: 20 },
     ],
     skills: {
-      soft: ["Leadership", "Mentoring", "Conflict Resolution", "Strategic Thinking"],
+      soft: ["Leadership", "Mentoring", "Conflict Resolution"],
       hard: ["Python", "React", "AWS", "Docker", "System Design"],
     },
-    skillScore: 92,
-    aptitudeScore: 88,
-    consolidated: true,
-    consolidatedCount: 140,
-    nonConsolidatedCount: 20,
-    automationPotential: 35,
-    experienceYears: 8.5,
+    history: {
+      productivity: [
+        { month: "Jun", value: 89 }, { month: "Jul", value: 90 }, { month: "Aug", value: 92 },
+        { month: "Sep", value: 91 }, { month: "Oct", value: 90 }, { month: "Nov", value: 91 },
+      ],
+    },
     documents: [
-      { name: "Performance Review Q4 2024.pdf", type: "Review", uploadDate: "2024-12-10" },
-      { name: "AWS Solutions Architect Certification.pdf", type: "Certificate", uploadDate: "2023-09-15" },
-      { name: "Leadership Training Completion.pdf", type: "Training", uploadDate: "2024-03-22" },
+      { name: "AWS Certification.pdf", type: "Certificate" },
+      { name: "Leadership Training.pdf", type: "Training" },
     ],
-    productivityHistory: [
-      { month: "Jun", value: 89 },
-      { month: "Jul", value: 90 },
-      { month: "Aug", value: 92 },
-      { month: "Sep", value: 91 },
-      { month: "Oct", value: 90 },
-      { month: "Nov", value: 91 },
-    ],
-    fatigueScore: 28,
     tags: ["high-performer", "promotion-ready"],
-    notes: [],
   },
   {
-    userid: "EMP003",
-    name: "David Chen",
-    email: "david.chen@company.com",
-    salary: 72000,
-    joiningDate: "2021-01-20",
-    department: "Operations",
-    position: "Operations Specialist",
-    currentRole: "Operations Coordinator",
-    recommendedRole: "Operations Analyst",
-    fitmentScore: 4.5,
-    productivity: 58,
-    utilization: 62,
-    processes: [
-      { name: "Data Entry", hours: 100, output: "Updated records", repetitiveScore: 95 },
-      { name: "Inventory Management", hours: 40, output: "Stock reports", repetitiveScore: 80 },
-      { name: "Customer Tickets", hours: 20, output: "Ticket resolution", repetitiveScore: 70 },
-    ],
-    skills: {
-      soft: ["Reliability", "Organization"],
-      hard: ["MS Office", "Data Entry", "Inventory Software"],
-    },
-    skillScore: 62,
-    aptitudeScore: 58,
-    consolidated: false,
-    consolidatedCount: 50,
-    nonConsolidatedCount: 110,
-    automationPotential: 92,
-    experienceYears: 3.8,
-    documents: [
-      { name: "Performance Review Q3 2024.pdf", type: "Review", uploadDate: "2024-09-30" },
-    ],
-    productivityHistory: [
-      { month: "Jun", value: 60 },
-      { month: "Jul", value: 57 },
-      { month: "Aug", value: 59 },
-      { month: "Sep", value: 56 },
-      { month: "Oct", value: 58 },
-      { month: "Nov", value: 58 },
-    ],
-    fatigueScore: 68,
-    tags: ["at-risk", "automation-candidate", "training-needed"],
-    notes: [],
-  },
-  {
-    userid: "EMP004",
-    name: "Aisha Patel",
-    email: "aisha.patel@company.com",
+    employeeId: "EMP003",
+    name: "Robert Taylor",
+    email: "robert.taylor@company.com",
+    department: "Engineering",
+    position: "DevOps Engineer",
+    currentRole: "Lead DevOps",
+    recommendedRole: "Cloud Architect",
     salary: 105000,
-    joiningDate: "2016-05-12",
-    department: "HR",
-    position: "HR Manager",
-    currentRole: "Talent Acquisition Manager",
-    recommendedRole: "Head of Talent",
-    fitmentScore: 9.2,
-    productivity: 94,
-    utilization: 91,
+    joiningDate: "2020-05-20",
+    scores: {
+      fitment: 94,
+      productivity: 96,
+      utilization: 98,
+      fatigue: 92,
+      aptitude: 91,
+      skill: 94,
+      automationPotential: 85,
+    },
+    experienceYears: 7.5,
     processes: [
-      { name: "Candidate Screening", hours: 70, output: "Shortlisted candidates", repetitiveScore: 55 },
-      { name: "Interview Coordination", hours: 30, output: "Interview schedules", repetitiveScore: 65 },
-      { name: "Offer Negotiations", hours: 40, output: "Signed offers", repetitiveScore: 25 },
-      { name: "Onboarding Programs", hours: 20, output: "New hire integration", repetitiveScore: 50 },
+      { name: "Pipeline Monitoring", hours: 100, repetitiveScore: 40 },
+      { name: "Infrastructure Triage", hours: 50, repetitiveScore: 10 },
+      { name: "Security Audit", hours: 30, repetitiveScore: 30 },
     ],
     skills: {
-      soft: ["Negotiation", "Empathy", "Communication", "Relationship Building"],
-      hard: ["ATS Systems", "LinkedIn Recruiter", "HR Analytics", "Compensation Planning"],
+      soft: ["Critical Thinking", "Stress Management"],
+      hard: ["Kubernetes", "Terraform", "Go", "GCP"],
     },
-    skillScore: 95,
-    aptitudeScore: 91,
-    consolidated: true,
-    consolidatedCount: 135,
-    nonConsolidatedCount: 25,
-    automationPotential: 48,
-    experienceYears: 9.6,
-    documents: [
-      { name: "Performance Review Q4 2024.pdf", type: "Review", uploadDate: "2024-12-05" },
-      { name: "SHRM-SCP Certification.pdf", type: "Certificate", uploadDate: "2022-07-18" },
-      { name: "Diversity Training.pdf", type: "Training", uploadDate: "2024-02-10" },
-    ],
-    productivityHistory: [
-      { month: "Jun", value: 93 },
-      { month: "Jul", value: 94 },
-      { month: "Aug", value: 95 },
-      { month: "Sep", value: 94 },
-      { month: "Oct", value: 93 },
-      { month: "Nov", value: 94 },
-    ],
-    fatigueScore: 22,
-    tags: ["high-performer", "overfit"],
-    notes: [],
+    history: {
+      productivity: [
+        { month: "Jun", value: 95 }, { month: "Jul", value: 96 }, { month: "Aug", value: 96 },
+        { month: "Sep", value: 97 }, { month: "Oct", value: 95 }, { month: "Nov", value: 96 },
+      ],
+    },
+    documents: [],
+    tags: ["burnout-risk", "automation-expert"],
   },
   {
-    userid: "EMP005",
-    name: "Michael Johnson",
-    email: "michael.johnson@company.com",
-    salary: 68000,
-    joiningDate: "2022-09-01",
-    department: "Finance",
-    position: "Junior Analyst",
-    currentRole: "Accounts Payable Analyst",
-    recommendedRole: "Financial Analyst",
-    fitmentScore: 5.5,
-    productivity: 65,
-    utilization: 70,
+    employeeId: "EMP004",
+    name: "James Wilson",
+    email: "james.wilson@company.com",
+    department: "Analytics",
+    position: "Data Analyst",
+    currentRole: "Junior Analyst",
+    recommendedRole: "Senior Data Analyst",
+    salary: 70000,
+    joiningDate: "2022-01-15",
+    scores: {
+      fitment: 64,
+      productivity: 58,
+      utilization: 52,
+      fatigue: 35,
+      aptitude: 62,
+      skill: 68,
+      automationPotential: 75,
+    },
+    experienceYears: 2.1,
     processes: [
-      { name: "Invoice Processing", hours: 110, output: "Processed invoices", repetitiveScore: 90 },
-      { name: "Expense Reports", hours: 30, output: "Approved expenses", repetitiveScore: 85 },
-      { name: "Vendor Management", hours: 20, output: "Vendor records", repetitiveScore: 60 },
+      { name: "Data Cleaning", hours: 120, repetitiveScore: 90 },
+      { name: "Reporting", hours: 30, repetitiveScore: 70 },
     ],
     skills: {
-      soft: ["Punctuality", "Teamwork"],
-      hard: ["Excel", "QuickBooks", "Data Entry"],
+      soft: ["Collaboration", "Presentation"],
+      hard: ["Python", "Tableau", "SQL", "Statistics"],
     },
-    skillScore: 68,
-    aptitudeScore: 72,
-    consolidated: true,
-    consolidatedCount: 90,
-    nonConsolidatedCount: 70,
-    automationPotential: 88,
-    experienceYears: 2.2,
-    documents: [
-      { name: "Performance Review Q3 2024.pdf", type: "Review", uploadDate: "2024-10-01" },
-      { name: "Excel Basics Certificate.pdf", type: "Certificate", uploadDate: "2023-05-15" },
-    ],
-    productivityHistory: [
-      { month: "Jun", value: 63 },
-      { month: "Jul", value: 65 },
-      { month: "Aug", value: 67 },
-      { month: "Sep", value: 64 },
-      { month: "Oct", value: 66 },
-      { month: "Nov", value: 65 },
-    ],
-    fatigueScore: 52,
-    tags: ["train-to-fit", "automation-candidate"],
-    notes: [],
-  },
+    history: {
+      productivity: [
+        { month: "Jun", value: 55 }, { month: "Jul", value: 57 }, { month: "Aug", value: 58 },
+        { month: "Sep", value: 60 }, { month: "Oct", value: 59 }, { month: "Nov", value: 58 },
+      ],
+    },
+    documents: [],
+    tags: ["under-utilized", "training-candidate"],
+  }
 ];
 
-// Helper functions
-export function searchEmployees(query, employees) {
-  if (!query.trim()) return [];
-  const searchTerm = query.toLowerCase();
-  return employees.filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm) ||
-    emp.userid.toLowerCase().includes(searchTerm) ||
-    emp.email.toLowerCase().includes(searchTerm)
-  );
-}
+/* ================= DERIVED LOGIC ================= */
 
-export function filterByDepartment(department, employees) {
-  if (department === "all") return employees;
-  return employees.filter(emp => emp.department === department);
-}
-
-export function filterByRole(role, employees) {
-  if (role === "all") return employees;
-  return employees.filter(emp => emp.position.toLowerCase().includes(role.toLowerCase()));
-}
-
-export function getFitmentClassification(score) {
-  if (score >= 9) return "Overfit";
-  if (score >= 8) return "Fit";
-  if (score >= 5) return "Train to Fit";
+/* Fitment Band */
+export function getFitmentBand(score) {
+  if (score >= 85) return "Overfit";
+  if (score >= 70) return "Fit";
+  if (score >= 50) return "Train-to-Fit";
   return "Unfit";
 }
 
-export function calculateFTEOptimization(employee) {
-  const totalHours = employee.processes.reduce((sum, p) => sum + p.hours, 0);
-  const expectedHours = 160;
-  return totalHours / expectedHours;
+/* Fatigue Risk */
+export function getFatigueRisk(score) {
+  if (score >= 75) return "High";
+  if (score >= 50) return "Medium";
+  return "Low";
 }
 
-export function calculateAutomationSavings(employee) {
-  return employee.processes
-    .filter(p => p.repetitiveScore >= 70)
-    .map(p => ({
-      processName: p.name,
-      fteSavings: (p.hours / 160) * (p.repetitiveScore / 100),
-    }))
-    .sort((a, b) => b.fteSavings - a.fteSavings);
+/* FTE Calculation */
+export function calculateFTE(employee) {
+  const totalHours = employee.processes?.reduce(
+    (sum, p) => sum + p.hours,
+    0
+  ) || 0;
+  return Number((totalHours / 160).toFixed(2));
 }
 
-export function filterEmployeeDataByRole(employee, role) {
-  const filtered = { ...employee };
-  if (role === "Admin") return filtered;
-  if (role === "Manager") {
-    filtered.salary = 0;
-    return filtered;
-  }
-  filtered.salary = 0;
-  filtered.email = "";
-  return filtered;
+/* Automation Opportunities */
+export function getAutomationCandidates(employee) {
+  return employee.processes?.filter(
+    (p) => p.repetitiveScore >= 70
+  ) || [];
 }
+
+/* Search */
+export function searchEmployees(query) {
+  if (!query) return [];
+  const q = query.toLowerCase();
+  return employees.filter(
+    (e) =>
+      e.name.toLowerCase().includes(q) ||
+      e.employeeId.toLowerCase().includes(q) ||
+      e.email.toLowerCase().includes(q)
+  );
+}
+
+/* Risk Level (used in AI + Optimization) */
+export function getOverallRisk(employee) {
+  if (
+    employee.scores.fatigue >= 75 ||
+    employee.scores.fitment < 50
+  )
+    return "High";
+  if (
+    employee.scores.fatigue >= 50 ||
+    employee.scores.fitment < 70
+  )
+    return "Medium";
+  return "Low";
+}
+
+/* Default Export */
+export default employees;

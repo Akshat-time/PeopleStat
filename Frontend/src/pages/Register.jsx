@@ -32,7 +32,7 @@ export default function Register() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    
+
     try {
       await register(username, email, password, department, role);
       toast({
@@ -63,14 +63,14 @@ export default function Register() {
             </p>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           {error && (
             <Alert variant="destructive" className="mb-6">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          
+
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-medium">Username</Label>
@@ -105,7 +105,7 @@ export default function Register() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">Password</Label>
               <div className="relative">
@@ -147,13 +147,13 @@ export default function Register() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="employee" data-testid="option-role-employee">Employee</SelectItem>
-                  <SelectItem value="admin" data-testid="option-role-admin">Admin</SelectItem>
+                  <SelectItem value="manager" data-testid="option-role-admin">Manager</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
-            <Button 
-              type="submit" 
+
+            <Button
+              type="submit"
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               disabled={isLoading}
               data-testid="button-register"

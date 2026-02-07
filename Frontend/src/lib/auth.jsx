@@ -14,10 +14,10 @@ export function AuthProvider({ children }) {
       setUser(JSON.parse(savedUser));
       console.log("Loaded user from localStorage", JSON.parse(savedUser));
     } else {
-      // Default to admin for testing
+      // Default to manager for testing
       const defaultUser = {
-        username: "admin",
-        role: "admin",
+        username: "manager",
+        role: "manager",
       };
       localStorage.setItem("mock_user", JSON.stringify(defaultUser));
       setUser(defaultUser);
@@ -29,29 +29,58 @@ export function AuthProvider({ children }) {
 
   // MOCK LOGIN
   const login = async (usernameOrEmail, password) => {
-    // employee login
+    // Check localStorage for registered users first
+    const registeredUsers = JSON.parse(localStorage.getItem("mock_registered_users") || "[]");
+    const foundUser = registeredUsers.find(u => (u.username === usernameOrEmail || u.email === usernameOrEmail) && u.password === password);
+
+    if (foundUser) {
+      const { password: _, ...userWithoutPassword } = foundUser;
+      localStorage.setItem("mock_user", JSON.stringify(userWithoutPassword));
+      setUser(userWithoutPassword);
+      return;
+    }
+
+    // fallback to default mock logins
     if (usernameOrEmail === "employee" && password === "1234") {
       const employeeUser = {
         username: "employee",
         role: "employee",
+        employeeId: "EMP001",
       };
       localStorage.setItem("mock_user", JSON.stringify(employeeUser));
       setUser(employeeUser);
       return;
     }
 
-    // admin login
-    if (usernameOrEmail === "admin" && password === "1234") {
-      const adminUser = {
-        username: "admin",
-        role: "admin",
+    if (usernameOrEmail === "manager" && password === "1234") {
+      const managerUser = {
+        username: "manager",
+        role: "manager",
       };
-      localStorage.setItem("mock_user", JSON.stringify(adminUser));
-      setUser(adminUser);
+      localStorage.setItem("mock_user", JSON.stringify(managerUser));
+      setUser(managerUser);
       return;
     }
 
     throw new Error("Invalid credentials");
+  };
+
+  // MOCK REGISTER
+  const register = async (username, email, password, department, role) => {
+    const newUser = { username, email, password, department, role };
+    const registeredUsers = JSON.parse(localStorage.getItem("mock_registered_users") || "[]");
+
+    if (registeredUsers.some(u => u.username === username || u.email === email)) {
+      throw new Error("User already exists");
+    }
+
+    registeredUsers.push(newUser);
+    localStorage.setItem("mock_registered_users", JSON.stringify(registeredUsers));
+
+    // Auto-login after registration
+    const { password: _, ...userWithoutPassword } = newUser;
+    localStorage.setItem("mock_user", JSON.stringify(userWithoutPassword));
+    setUser(userWithoutPassword);
   };
 
   const logout = () => {
@@ -64,6 +93,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         login,
+        register,
         logout,
         isLoading,
       }}

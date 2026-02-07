@@ -2,396 +2,446 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/lib/auth";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useState, useEffect } from "react";
-import { Loader2, Shield } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Settings as SettingsIcon, Upload, Save, MapPin, Users, Database, Building2, Target, CheckCircle } from "lucide-react";
+import { employees } from "@/data/mockEmployeeData";
 
 export default function Settings() {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [activeTab, setActiveTab] = useState("map");
+  const [newDepartmentName, setNewDepartmentName] = useState("");
+  const [targetUnit, setTargetUnit] = useState("");
+  const [teamIdentifier, setTeamIdentifier] = useState("");
+  const [burnoutCritical, setBurnoutCritical] = useState(85);
+  const [competencyDelta, setCompetencyDelta] = useState(15);
+  const [utilizationYield, setUtilizationYield] = useState(92);
 
-  const passwordMutation = useMutation({
-    mutationFn: async (data) => {
-      return apiRequest("/api/settings/password", {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Password Updated",
-        description: "Your password has been changed successfully.",
-      });
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    },
-    onError: (error) => {
-      toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update password",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handlePasswordSubmit = (e) => {
-    e.preventDefault();
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all password fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Validation Error",
-        description: "New passwords do not match",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: "Validation Error",
-        description: "New password must be at least 6 characters",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    passwordMutation.mutate({ currentPassword, newPassword });
+  // Mock teams data
+  const teams = {
+    "Finance": ["Core Finance", "Budget Planning", "Audit Team"],
+    "IT": ["Development", "Infrastructure", "Security"],
   };
 
-  const { data: settings } = useQuery({
-    queryKey: ["/api/settings"],
-    enabled: user?.role === "admin",
-  });
-
-  const settingMutation = useMutation({
-    mutationFn: async ({ key, value, category, description }) => {
-      return apiRequest(`/api/settings/${key}`, {
-        method: "PUT",
-        body: JSON.stringify({ value, category, description }),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-      toast({
-        title: "Settings Updated",
-        description: "System settings have been saved successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update settings",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const [fitmentWeights, setFitmentWeights] = useState({
-    skills: 40,
-    activity: 30,
-    productivity: 20,
-    softskills: 10,
-  });
-
-  useEffect(() => {
-    if (settings) {
-      const fitmentWeightsSetting = settings.find((s) => s.key === "fitment_weights");
-      if (fitmentWeightsSetting && fitmentWeightsSetting.value) {
-        setFitmentWeights(fitmentWeightsSetting.value);
+  // Derive departments from employees
+  const departments = useMemo(() => {
+    return employees.reduce((acc, emp) => {
+      if (!acc[emp.department]) {
+        acc[emp.department] = [];
       }
-    }
-  }, [settings]);
+      acc[emp.department].push(emp);
+      return acc;
+    }, {});
+  }, []);
 
-  const handleFitmentWeightChange = (key, value) => {
-    setFitmentWeights((prev) => ({ ...prev, [key]: value }));
+  // Calculate department metrics
+  const getDepartmentMetrics = (deptEmployees) => {
+    const totalEmployees = deptEmployees.length;
+    const avgFitment = deptEmployees.reduce((sum, emp) => sum + emp.scores.fitment, 0) / totalEmployees;
+    const avgUtilization = deptEmployees.reduce((sum, emp) => sum + emp.scores.utilization, 0) / totalEmployees;
+    const fte = deptEmployees.reduce((sum, emp) => sum + (emp.processes?.reduce((pSum, p) => pSum + p.hours, 0) || 0) / 160, 0);
+    return {
+      totalEmployees,
+      avgFitment: avgFitment.toFixed(1),
+      avgUtilization: avgUtilization.toFixed(1),
+      fte: fte.toFixed(1)
+    };
   };
 
-  const saveFitmentWeights = () => {
-    settingMutation.mutate({
-      key: "fitment_weights",
-      value: fitmentWeights,
-      category: "system",
-      description: "Weights for fitment score calculation",
+  const handleInitializeUnit = () => {
+    if (!newDepartmentName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a department name",
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Unit Initialized",
+      description: `New strategic unit "${newDepartmentName}" has been initialized.`,
+    });
+    setNewDepartmentName("");
+  };
+
+  const handleConfirmMap = () => {
+    if (!targetUnit || !teamIdentifier.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a target unit and enter team identifier",
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Mapping Confirmed",
+      description: `Team "${teamIdentifier}" mapped to ${targetUnit}.`,
+    });
+    setTargetUnit("");
+    setTeamIdentifier("");
+  };
+
+  const handleLaunchPipeline = () => {
+    toast({
+      title: "Intelligence Pipeline Launched",
+      description: "Mass data ingestion pipeline has been initiated.",
+    });
+  };
+
+  const handleUpdateLogic = () => {
+    toast({
+      title: "System Logic Updated",
+      description: "Logic thresholds have been updated successfully.",
+    });
+  };
+
+  const handleEmployeeCommit = (employeeId) => {
+    toast({
+      title: "Mapping Updated",
+      description: `Employee ${employeeId} mapping has been committed.`,
     });
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-3xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage your account and application preferences
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile Information</CardTitle>
-          <CardDescription>Your account details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-2">
-            <Label htmlFor="username">Username</Label>
-            <Input id="username" value={user?.username || ""} disabled data-testid="input-username" />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={user?.email || ""}
-              disabled
-              data-testid="input-email"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="role">Role</Label>
-            <Input id="role" value={user?.role === "admin" ? "Administrator" : "Employee"} disabled />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Security</CardTitle>
-          <CardDescription>Change your password</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <Input
-                id="current-password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                data-testid="input-current-password"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                data-testid="input-new-password"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                data-testid="input-confirm-password"
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={passwordMutation.isPending}
-              data-testid="button-update-password"
-            >
-              {passwordMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Password"
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {user?.role === "admin" && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b bg-card">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left Side */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <SettingsIcon className="h-6 w-6 text-primary" />
+                <span className="text-sm font-medium text-muted-foreground">GOVERNANCE HUB</span>
+              </div>
               <div>
-                <CardTitle>Admin Settings</CardTitle>
-                <CardDescription>Configure system-wide settings (Admin only)</CardDescription>
+                <h1 className="text-2xl font-bold">System Configuration</h1>
+                <p className="text-sm text-muted-foreground">ENTERPRISE ARCHITECTURE & LOGIC MAPPING</p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="font-semibold mb-3">Fitment Score Weights</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Configure how different factors are weighted when calculating employee-to-role fit scores.
-                Total should equal 100%.
-              </p>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="weight-skills">Skills Match</Label>
-                    <span className="text-sm font-medium">{fitmentWeights.skills}%</span>
-                  </div>
-                  <Input
-                    id="weight-skills"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={fitmentWeights.skills}
-                    onChange={(e) => handleFitmentWeightChange("skills", parseInt(e.target.value))}
-                    data-testid="input-weight-skills"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="weight-activity">Activity Level</Label>
-                    <span className="text-sm font-medium">{fitmentWeights.activity}%</span>
-                  </div>
-                  <Input
-                    id="weight-activity"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={fitmentWeights.activity}
-                    onChange={(e) => handleFitmentWeightChange("activity", parseInt(e.target.value))}
-                    data-testid="input-weight-activity"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="weight-productivity">Productivity Score</Label>
-                    <span className="text-sm font-medium">{fitmentWeights.productivity}%</span>
-                  </div>
-                  <Input
-                    id="weight-productivity"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={fitmentWeights.productivity}
-                    onChange={(e) => handleFitmentWeightChange("productivity", parseInt(e.target.value))}
-                    data-testid="input-weight-productivity"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="weight-softskills">Soft Skills</Label>
-                    <span className="text-sm font-medium">{fitmentWeights.softskills}%</span>
-                  </div>
-                  <Input
-                    id="weight-softskills"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={fitmentWeights.softskills}
-                    onChange={(e) => handleFitmentWeightChange("softskills", parseInt(e.target.value))}
-                    data-testid="input-weight-softskills"
-                  />
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="font-medium">Total Weight</span>
-                  <span className={`font-bold ${
-                    Object.values(fitmentWeights).reduce((a, b) => a + b, 0) === 100
-                      ? "text-green-600 dark:text-green-500"
-                      : "text-destructive"
-                  }`}>
-                    {Object.values(fitmentWeights).reduce((a, b) => a + b, 0)}%
-                  </span>
-                </div>
-              </div>
+
+            {/* Right Side - Tabs */}
+            <div className="flex gap-2">
               <Button
-                onClick={saveFitmentWeights}
-                disabled={settingMutation.isPending || Object.values(fitmentWeights).reduce((a, b) => a + b, 0) !== 100}
-                className="mt-4"
-                data-testid="button-save-fitment-weights"
+                variant={activeTab === "map" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTab("map")}
+                className="rounded-full"
               >
-                {settingMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Fitment Weights"
-                )}
+                Organization Map
+              </Button>
+              <Button
+                variant={activeTab === "allotment" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTab("allotment")}
+                className="rounded-full"
+              >
+                Workforce Allotment
+              </Button>
+              <Button
+                variant={activeTab === "processing" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTab("processing")}
+                className="rounded-full"
+              >
+                Data Processing
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Notifications</CardTitle>
-          <CardDescription>Manage your notification preferences</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Email Notifications</p>
-              <p className="text-sm text-muted-foreground">
-                Receive email updates about system activity
-              </p>
-            </div>
-            <Switch defaultChecked data-testid="switch-email-notifications" />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Fatigue Alerts</p>
-              <p className="text-sm text-muted-foreground">
-                Get notified when employees show burnout indicators
-              </p>
-            </div>
-            <Switch defaultChecked data-testid="switch-fatigue-alerts" />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Weekly Reports</p>
-              <p className="text-sm text-muted-foreground">
-                Receive weekly summary reports via email
-              </p>
-            </div>
-            <Switch data-testid="switch-weekly-reports" />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Content */}
+      <div className="container mx-auto px-6 py-6">
+        {activeTab === "map" && (
+          <div className="grid grid-cols-12 gap-6">
+            {/* Left Sidebar */}
+            <div className="col-span-4 space-y-6">
+              {/* Global Hierarchy Health */}
+              <Card className="bg-slate-900 text-white">
+                <CardHeader>
+                  <CardTitle className="text-lg">Global Hierarchy Health</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Operational Units</span>
+                    <span className="font-bold text-xl">{Object.keys(departments).length}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Active Teams</span>
+                    <span className="font-bold text-xl">{Object.values(teams).flat().length}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Mapping Integrity</span>
+                    <span className="font-bold text-xl text-green-400">98%</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Data & Privacy</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button variant="outline" data-testid="button-export-data">
-            Export My Data
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            Download all your data in a machine-readable format
-          </p>
-          <Separator />
-          <Button variant="destructive" data-testid="button-delete-account">
-            Delete Account
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            Permanently delete your account and all associated data
-          </p>
-        </CardContent>
-      </Card>
+              {/* New Strategic Unit */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">New Strategic Unit</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="department-name">Department Name</Label>
+                    <Input
+                      id="department-name"
+                      value={newDepartmentName}
+                      onChange={(e) => setNewDepartmentName(e.target.value)}
+                      placeholder="Enter department name"
+                    />
+                  </div>
+                  <Button onClick={handleInitializeUnit} className="w-full">
+                    INITIALIZE UNIT
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Team Topology */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Team Topology</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="target-unit">Target Unit</Label>
+                    <Select value={targetUnit} onValueChange={setTargetUnit}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select target unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(departments).map((dept) => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="team-identifier">Team Identifier</Label>
+                    <Input
+                      id="team-identifier"
+                      value={teamIdentifier}
+                      onChange={(e) => setTeamIdentifier(e.target.value)}
+                      placeholder="Enter team identifier"
+                    />
+                  </div>
+                  <Button onClick={handleConfirmMap} className="w-full">
+                    CONFIRM MAP
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Main Grid */}
+            <div className="col-span-8">
+              <div className="grid grid-cols-2 gap-6">
+                {Object.entries(departments).map(([deptName, deptEmployees]) => {
+                  const metrics = getDepartmentMetrics(deptEmployees);
+                  const deptTeams = teams[deptName] || [];
+                  return (
+                    <Card key={deptName} className="p-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold">{deptName}</h3>
+                          <Badge variant="outline">DEPT-{deptName.toUpperCase().slice(0, 4)}</Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">FTE Count</p>
+                            <p className="text-2xl font-bold">{metrics.fte}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Avg Fitment %</p>
+                            <p className="text-2xl font-bold">{metrics.avgFitment}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Utilization %</p>
+                            <p className="text-2xl font-bold">{metrics.avgUtilization}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Active Nodes</p>
+                            <p className="text-2xl font-bold">{deptTeams.length}</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Active Team Nodes</p>
+                          <div className="flex flex-wrap gap-1">
+                            {deptTeams.length > 0 ? (
+                              deptTeams.map((team) => (
+                                <Badge key={team} variant="secondary" className="text-xs">
+                                  {team}
+                                </Badge>
+                              ))
+                            ) : (
+                              <div className="border-2 border-dashed border-muted-foreground/25 rounded px-3 py-1 text-xs text-muted-foreground">
+                                NO LOGICAL TEAMS MAPPED
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "allotment" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Workforce Allotment Engine</h2>
+              <p className="text-muted-foreground">Synchronize workforce assets with operational topology</p>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b">
+                      <tr>
+                        <th className="text-left p-4 font-medium">Operational Asset</th>
+                        <th className="text-left p-4 font-medium">Current Mapping</th>
+                        <th className="text-left p-4 font-medium">Target Unit</th>
+                        <th className="text-left p-4 font-medium">Target Node</th>
+                        <th className="text-left p-4 font-medium">Commit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {employees.map((employee) => (
+                        <tr key={employee.employeeId} className="border-b">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-medium">
+                                {employee.name.split(' ').map(n => n[0]).join('')}
+                              </div>
+                              <div>
+                                <p className="font-medium">{employee.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {employee.employeeId} • {employee.position}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <Badge variant="outline">{employee.department}</Badge>
+                          </td>
+                          <td className="p-4">
+                            <Select>
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.keys(departments).map((dept) => (
+                                  <SelectItem key={dept} value={dept}>
+                                    {dept}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="p-4">
+                            <Select>
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.values(teams).flat().map((team) => (
+                                  <SelectItem key={team} value={team}>
+                                    {team}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="p-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEmployeeCommit(employee.employeeId)}
+                            >
+                              <Save className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "processing" && (
+          <div className="grid grid-cols-2 gap-6">
+            {/* Left Card - Mass Data Ingestion */}
+            <Card>
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8">
+                  <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Mass Data Ingestion</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Upload CSV, JSON, or XLS files to bulk import employee data,
+                    organizational structures, and performance metrics
+                  </p>
+                  <Button onClick={handleLaunchPipeline}>
+                    LAUNCH INTELLIGENCE PIPELINE
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Right Card - Logic Thresholds */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Logic Thresholds</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="burnout-critical">Burnout Critical Level (%)</Label>
+                  <Input
+                    id="burnout-critical"
+                    type="number"
+                    value={burnoutCritical}
+                    onChange={(e) => setBurnoutCritical(parseInt(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="competency-delta">Competency Delta Gap (%)</Label>
+                  <Input
+                    id="competency-delta"
+                    type="number"
+                    value={competencyDelta}
+                    onChange={(e) => setCompetencyDelta(parseInt(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="utilization-yield">Utilization Yield Target (%)</Label>
+                  <Input
+                    id="utilization-yield"
+                    type="number"
+                    value={utilizationYield}
+                    onChange={(e) => setUtilizationYield(parseInt(e.target.value))}
+                  />
+                </div>
+                <Button onClick={handleUpdateLogic} className="w-full">
+                  UPDATE SYSTEM LOGIC
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

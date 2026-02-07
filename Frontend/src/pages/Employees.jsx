@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import {
   Users,
   AlertTriangle,
   Search,
   Filter,
   Download,
-  UserPlus,
+  Plus,
   TrendingUp,
   TrendingDown,
   Eye,
@@ -14,182 +15,82 @@ import {
   Target,
   Activity,
   Heart,
+  LayoutGrid,
+  List,
+  MoreVertical,
   ArrowRight,
+  UserPlus,
 } from "lucide-react";
 
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 import EmployeeDrawer from "@/components/EmployeeDrawer";
-
-// ---------------- MOCK DATA ----------------
-const employees = [
-  {
-    id: "EMP001",
-    name: "Sarah Johnson",
-    role: "Senior Developer",
-    department: "Engineering",
-    fitment: 92,
-    productivity: 88,
-    utilization: 94,
-    risk: "LOW",
-    avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-  },
-  {
-    id: "EMP002",
-    name: "David Martinez",
-    role: "Product Manager",
-    department: "Product",
-    fitment: 76,
-    productivity: 72,
-    utilization: 68,
-    risk: "MEDIUM",
-    avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-  },
-  {
-    id: "EMP003",
-    name: "Emily Chen",
-    role: "UX Designer",
-    department: "Design",
-    fitment: 89,
-    productivity: 91,
-    utilization: 87,
-    risk: "LOW",
-    avatar: "https://randomuser.me/api/portraits/women/68.jpg",
-  },
-  {
-    id: "EMP004",
-    name: "James Wilson",
-    role: "Data Analyst",
-    department: "Analytics",
-    fitment: 64,
-    productivity: 58,
-    utilization: 52,
-    risk: "HIGH",
-    avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-  },
-  {
-    id: "EMP005",
-    name: "Lisa Anderson",
-    role: "Marketing Specialist",
-    department: "Marketing",
-    fitment: 85,
-    productivity: 82,
-    utilization: 79,
-    risk: "LOW",
-    avatar: "https://randomuser.me/api/portraits/women/50.jpg",
-  },
-  {
-    id: "EMP006",
-    name: "Robert Taylor",
-    role: "DevOps Engineer",
-    department: "Engineering",
-    fitment: 94,
-    productivity: 96,
-    utilization: 98,
-    risk: "HIGH",
-    avatar: "https://randomuser.me/api/portraits/men/33.jpg",
-  },
-  {
-    id: "EMP007",
-    name: "Maria Garcia",
-    role: "HR Manager",
-    department: "HR",
-    fitment: 78,
-    productivity: 75,
-    utilization: 71,
-    risk: "MEDIUM",
-    avatar: "https://randomuser.me/api/portraits/women/52.jpg",
-  },
-  {
-    id: "EMP008",
-    name: "Michael Brown",
-    role: "Sales Lead",
-    department: "Sales",
-    fitment: 81,
-    productivity: 84,
-    utilization: 88,
-    risk: "LOW",
-    avatar: "https://randomuser.me/api/portraits/men/34.jpg",
-  },
-  {
-    id: "EMP009",
-    name: "Kevin Lee",
-    role: "QA Engineer",
-    department: "Engineering",
-    fitment: 73,
-    productivity: 69,
-    utilization: 65,
-    risk: "MEDIUM",
-    avatar: "https://randomuser.me/api/portraits/men/35.jpg",
-  },
-  {
-    id: "EMP010",
-    name: "Jennifer White",
-    role: "Content Writer",
-    department: "Marketing",
-    fitment: 56,
-    productivity: 52,
-    utilization: 48,
-    risk: "HIGH",
-    avatar: "https://randomuser.me/api/portraits/women/53.jpg",
-  },
-];
-
-const kpiCards = [
-  {
-    title: "Total Employees",
-    value: "247",
-    delta: "+8%",
-    deltaType: "up",
-    icon: Users,
-    color: "blue",
-  },
-  {
-    title: "Avg Fitment Score",
-    value: "82.4%",
-    delta: "+12%",
-    deltaType: "up",
-    icon: Target,
-    color: "green",
-  },
-  {
-    title: "High Performers",
-    value: "42",
-    delta: "+5%",
-    deltaType: "up",
-    icon: TrendingUp,
-    color: "purple",
-  },
-  {
-    title: "Low Utilization",
-    value: "18",
-    delta: "-3%",
-    deltaType: "down",
-    icon: Activity,
-    color: "orange",
-  },
-  {
-    title: "High Fatigue Risk",
-    value: "12",
-    delta: "+15%",
-    deltaType: "up",
-    icon: Heart,
-    color: "red",
-  },
-];
+import { employees as centralEmployees, getOverallRisk, getFitmentBand } from "@/data/mockEmployeeData";
+import { getWorkforceKPIs, getAISignals } from "@/lib/workforce-utils";
 
 // ---------------- PAGE ----------------
 export default function Employees() {
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [activeFilter, setActiveFilter] = useState(null);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [selectedAtRiskEmployee, setSelectedAtRiskEmployee] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({ department: "", risk: "", fitmentMin: "", fitmentMax: "" });
+  const [showAll, setShowAll] = useState(false);
+  const { toast } = useToast();
 
-  const filtered = employees.filter((e) =>
-    e.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const kpis = useMemo(() => getWorkforceKPIs(), []);
+  const aiSignals = useMemo(() => getAISignals(), []);
+
+  const kpiCards = useMemo(() => [
+    {
+      title: "Total Employees",
+      value: kpis.totalEmployees.toString(),
+      delta: "+8%",
+      deltaType: "up",
+      icon: Users,
+      color: "blue",
+    },
+    {
+      title: "Avg Fitment Score",
+      value: `${kpis.avgFitment}%`,
+      delta: "+12%",
+      deltaType: "up",
+      icon: Target,
+      color: "green",
+    },
+    {
+      title: "Burnout Risk",
+      value: `${kpis.burnoutRisk}%`,
+      delta: "-5%",
+      deltaType: "down",
+      icon: Heart,
+      color: "red",
+    },
+    {
+      title: "Automation Savings",
+      value: `$${kpis.automationSavings}`,
+      delta: "+15%",
+      deltaType: "up",
+      icon: Zap,
+      color: "purple",
+    },
+  ], [kpis]);
+
+  const filtered = useMemo(() => {
+    return centralEmployees.filter((e) =>
+      e.name.toLowerCase().includes(search.toLowerCase()) ||
+      e.employeeId.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search]);
 
   const getFitmentColor = (score) => {
     if (score >= 85) return "bg-green-100 text-green-800";
@@ -199,11 +100,31 @@ export default function Employees() {
 
   const getRiskIcon = (risk) => {
     switch (risk) {
-      case "HIGH": return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case "MEDIUM": return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      case "High": return <AlertTriangle className="h-4 w-4 text-red-500" />;
+      case "Medium": return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
       default: return <Eye className="h-4 w-4 text-green-500" />;
     }
   };
+
+  const handleExport = () => {
+    const csvContent = "data:text/csv;charset=utf-8," +
+      "Name,Email,Position,Department,Fitment Score,Productivity,Utilization,Salary\n" +
+      centralEmployees.map(emp =>
+        `${emp.name},${emp.email},${emp.position},${emp.department},${emp.scores.fitment},${emp.scores.productivity},${emp.scores.utilization},${emp.salary}`
+      ).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "employees.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleAddEmployee = () => navigate("/add-employee");
+  const handleViewRecommendations = () => navigate("/optimization");
+  const handleFilterToggle = () => setShowFilters(!showFilters);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter']">
@@ -217,11 +138,11 @@ export default function Employees() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" className="border-[#E5E7EB] text-[#0F172A]">
+            <Button variant="outline" className="border-[#E5E7EB] text-[#0F172A]" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            <Button className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white">
+            <Button className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white" onClick={handleAddEmployee}>
               <UserPlus className="h-4 w-4 mr-2" />
               Add Employee
             </Button>
@@ -238,11 +159,11 @@ export default function Employees() {
               <div>
                 <h3 className="text-lg font-semibold text-[#0F172A]">AI Workforce Insights</h3>
                 <p className="text-[#64748B] mt-1">
-                  3 employees showing signs of high fatigue risk. 5 employees are underutilized and ready for additional responsibilities. Consider redistributing workload to optimize team performance.
+                  {aiSignals.length > 0 ? aiSignals.map(s => s.message).join(". ") : "Workforce is operating within stable parameters. No critical optimizations recommended at this time."}
                 </p>
               </div>
             </div>
-            <Button variant="outline" className="border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF]">
+            <Button variant="outline" className="border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF]" onClick={handleViewRecommendations}>
               View Recommendations
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
@@ -252,30 +173,32 @@ export default function Employees() {
         {/* KPI CARDS ROW */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {kpiCards.map((card, index) => (
-            <Card key={index} className="p-4 bg-white border-[#E5E7EB] rounded-xl shadow-sm relative overflow-hidden">
+            <Card
+              key={index}
+              className={`p-4 bg-white border-[#E5E7EB] rounded-xl shadow-sm relative overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-[#2563EB] ${activeFilter === card.title ? 'ring-2 ring-[#2563EB] border-[#2563EB]' : ''
+                }`}
+              onClick={() => setActiveFilter(activeFilter === card.title ? null : card.title)}
+            >
               <div className="absolute top-0 right-0 p-2">
-                <Badge className={`text-xs font-medium ${
-                  card.deltaType === 'up' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
+                <Badge className={`text-xs font-medium ${card.deltaType === 'up' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
                   {card.deltaType === 'up' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
                   {card.delta}
                 </Badge>
               </div>
               <div className="flex items-center gap-3 mb-3">
-                <div className={`p-2 rounded-full ${
-                  card.color === 'blue' ? 'bg-blue-100' :
+                <div className={`p-2 rounded-full ${card.color === 'blue' ? 'bg-blue-100' :
                   card.color === 'green' ? 'bg-green-100' :
-                  card.color === 'purple' ? 'bg-purple-100' :
-                  card.color === 'orange' ? 'bg-orange-100' :
-                  'bg-red-100'
-                }`}>
-                  <card.icon className={`h-5 w-5 ${
-                    card.color === 'blue' ? 'text-blue-600' :
+                    card.color === 'purple' ? 'bg-purple-100' :
+                      card.color === 'orange' ? 'bg-orange-100' :
+                        'bg-red-100'
+                  }`}>
+                  <card.icon className={`h-5 w-5 ${card.color === 'blue' ? 'text-blue-600' :
                     card.color === 'green' ? 'text-green-600' :
-                    card.color === 'purple' ? 'text-purple-600' :
-                    card.color === 'orange' ? 'text-orange-600' :
-                    'text-red-600'
-                  }`} />
+                      card.color === 'purple' ? 'text-purple-600' :
+                        card.color === 'orange' ? 'text-orange-600' :
+                          'text-red-600'
+                    }`} />
                 </div>
               </div>
               <div>
@@ -285,6 +208,76 @@ export default function Employees() {
             </Card>
           ))}
         </div>
+
+        {/* FILTERS MODAL */}
+        {showFilters && (
+          <Card className="p-6 bg-white border-[#E5E7EB] rounded-xl shadow-sm mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-[#0F172A]">Filters</h3>
+              <Button variant="ghost" onClick={() => setShowFilters(false)}>×</Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#64748B] mb-2">Department</label>
+                <select
+                  className="w-full p-2 border border-[#E5E7EB] rounded-md"
+                  value={filters.department}
+                  onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+                >
+                  <option value="">All Departments</option>
+                  <option value="Engineering">Engineering</option>
+                  <option value="Product">Product</option>
+                  <option value="Design">Design</option>
+                  <option value="Analytics">Analytics</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="HR">HR</option>
+                  <option value="Sales">Sales</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#64748B] mb-2">Risk Level</label>
+                <select
+                  className="w-full p-2 border border-[#E5E7EB] rounded-md"
+                  value={filters.risk}
+                  onChange={(e) => setFilters({ ...filters, risk: e.target.value })}
+                >
+                  <option value="">All Risk Levels</option>
+                  <option value="HIGH">High Risk</option>
+                  <option value="MEDIUM">Medium Risk</option>
+                  <option value="LOW">Low Risk</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#64748B] mb-2">Min Fitment Score</label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  className="w-full border-[#E5E7EB]"
+                  value={filters.fitmentMin}
+                  onChange={(e) => setFilters({ ...filters, fitmentMin: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#64748B] mb-2">Max Fitment Score</label>
+                <Input
+                  type="number"
+                  placeholder="100"
+                  className="w-full border-[#E5E7EB]"
+                  value={filters.fitmentMax}
+                  onChange={(e) => setFilters({ ...filters, fitmentMax: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button onClick={() => setFilters({ department: "", risk: "", fitmentMin: "", fitmentMax: "" })}>
+                Clear Filters
+              </Button>
+              <Button variant="outline" onClick={() => setShowFilters(false)}>
+                Apply Filters
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* WORKFORCE OVERVIEW TABLE + RIGHT SIDEBAR */}
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
@@ -302,7 +295,7 @@ export default function Employees() {
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
-                <Button variant="outline" className="border-[#E5E7EB]">
+                <Button variant="outline" className="border-[#E5E7EB]" onClick={handleFilterToggle}>
                   <Filter className="h-4 w-4 mr-2" />
                   Filters
                 </Button>
@@ -322,30 +315,35 @@ export default function Employees() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice(0, 10).map((e) => (
-                  <tr key={e.id} className="border-b border-[#E5E7EB] hover:bg-[#F8FAFC] cursor-pointer" onClick={() => setSelectedEmployee(e)}>
+                {filtered.map((e) => (
+                  <tr key={e.employeeId} className="border-b border-[#E5E7EB] hover:bg-[#F8FAFC] cursor-pointer h-16" onClick={() => setSelectedEmployee(e)}>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
-                        <img src={e.avatar} className="h-10 w-10 rounded-full" />
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm uppercase">
+                          {e.name.split(' ').map(n => n[0]).join('')}
+                        </div>
                         <div>
                           <p className="font-medium text-[#0F172A]">{e.name}</p>
-                          <p className="text-xs text-[#64748B]">{e.id}</p>
+                          <p className="text-xs text-[#64748B]">{e.employeeId}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 text-[#0F172A]">{e.role}</td>
+                    <td className="p-3 text-[#0F172A]">{e.position}</td>
                     <td className="p-3 text-[#0F172A]">{e.department}</td>
                     <td className="p-3">
-                      <Badge className={`font-medium ${getFitmentColor(e.fitment)}`}>
-                        {e.fitment}%
+                      <Badge className={`font-medium ${getFitmentColor(e.scores.fitment)}`}>
+                        {e.scores.fitment}%
                       </Badge>
                     </td>
                     <td className="p-3">
-                      <Progress value={e.productivity} className="w-20" />
+                      <div className="flex items-center gap-2">
+                        <Progress value={e.scores.productivity} className="w-20" />
+                        <span className="text-xs">{e.scores.productivity}%</span>
+                      </div>
                     </td>
-                    <td className="p-3 font-medium text-[#0F172A]">{e.utilization}%</td>
+                    <td className="p-3 font-medium text-[#0F172A]">{e.scores.utilization}%</td>
                     <td className="p-3">
-                      {getRiskIcon(e.risk)}
+                      {getRiskIcon(getOverallRisk(e))}
                     </td>
                   </tr>
                 ))}
@@ -353,9 +351,13 @@ export default function Employees() {
             </table>
 
             <div className="flex justify-center mt-6">
-              <Button variant="link" className="text-[#2563EB] hover:text-[#1D4ED8]">
-                View All Employees
-                <ChevronRight className="h-4 w-4 ml-1" />
+              <Button
+                variant="link"
+                className="text-[#2563EB] hover:text-[#1D4ED8]"
+                onClick={() => setShowAll(!showAll)}
+              >
+                {showAll ? "Show Less" : "View All Employees"}
+                <ChevronRight className={`h-4 w-4 ml-1 transition-transform ${showAll ? "rotate-90" : ""}`} />
               </Button>
             </div>
           </Card>
@@ -366,33 +368,18 @@ export default function Employees() {
             <Card className="p-4 bg-white border-[#E5E7EB] rounded-xl shadow-sm">
               <h3 className="font-semibold text-[#0F172A] mb-4">AI Workforce Alerts</h3>
               <div className="space-y-3">
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <span className="text-red-500">🔴</span>
-                    <div>
-                      <p className="text-sm font-medium text-[#0F172A]">High Burnout Risk</p>
-                      <p className="text-xs text-[#64748B]">Robert Taylor (98% capacity for 3 weeks)</p>
+                {aiSignals.map((sig, i) => (
+                  <div key={i} className="p-3 bg-blue-50 border border-blue-100 rounded-lg cursor-pointer hover:bg-blue-100" onClick={() => navigate(sig.path)}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-blue-500">🔵</span>
+                      <div>
+                        <p className="text-sm font-medium text-[#0F172A] capitalize">{sig.type} Signal</p>
+                        <p className="text-xs text-[#64748B]">{sig.message}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <span className="text-yellow-500">🟠</span>
-                    <div>
-                      <p className="text-sm font-medium text-[#0F172A]">Low Fitment Alert</p>
-                      <p className="text-xs text-[#64748B]">James Wilson at 64%</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <span className="text-blue-500">🔵</span>
-                    <div>
-                      <p className="text-sm font-medium text-[#0F172A]">Underutilized Talent</p>
-                      <p className="text-xs text-[#64748B]">Jennifer White at 56%</p>
-                    </div>
-                  </div>
-                </div>
+                ))}
+                {aiSignals.length === 0 && <p className="text-xs text-muted-foreground italic">No active alerts.</p>}
               </div>
             </Card>
 
@@ -400,18 +387,19 @@ export default function Employees() {
             <Card className="p-4 bg-white border-[#E5E7EB] rounded-xl shadow-sm">
               <h3 className="font-semibold text-[#0F172A] mb-4">Top 3 At-Risk Employees</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
-                  <span className="text-sm font-medium text-[#0F172A]">Robert Taylor</span>
-                  <Badge className="bg-red-100 text-red-800">HIGH</Badge>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg">
-                  <span className="text-sm font-medium text-[#0F172A]">James Wilson</span>
-                  <Badge className="bg-yellow-100 text-yellow-800">MED</Badge>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg">
-                  <span className="text-sm font-medium text-[#0F172A]">David Martinez</span>
-                  <Badge className="bg-yellow-100 text-yellow-800">MED</Badge>
-                </div>
+                {[...centralEmployees]
+                  .sort((a, b) => b.scores.fatigue - a.scores.fatigue)
+                  .slice(0, 3)
+                  .map(emp => (
+                    <div
+                      key={emp.employeeId}
+                      className="flex items-center justify-between p-2 bg-red-50 rounded-lg cursor-pointer hover:bg-red-100 transition"
+                      onClick={() => setSelectedEmployee(emp)}
+                    >
+                      <span className="text-sm font-medium text-[#0F172A]">{emp.name}</span>
+                      <Badge className="bg-red-100 text-red-800">{getOverallRisk(emp).toUpperCase()}</Badge>
+                    </div>
+                  ))}
               </div>
             </Card>
 
@@ -419,10 +407,14 @@ export default function Employees() {
             <Card className="p-4 bg-green-50 border border-green-200 rounded-xl shadow-sm">
               <h3 className="font-semibold text-[#0F172A] mb-3">Promotion-Ready</h3>
               <div className="space-y-2 mb-4">
-                <p className="text-sm text-[#0F172A]">Sarah Johnson → Tech Lead</p>
-                <p className="text-sm text-[#0F172A]">Emily Chen → Senior Designer</p>
+                {centralEmployees
+                  .filter(e => e.scores.fitment >= 85)
+                  .slice(0, 2)
+                  .map(emp => (
+                    <p key={emp.employeeId} className="text-sm text-[#0F172A]">{emp.name} → {emp.recommendedRole}</p>
+                  ))}
               </div>
-              <Button variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-100">
+              <Button variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-100" onClick={() => navigate("/fitment-analysis")}>
                 View All Candidates
               </Button>
             </Card>
@@ -434,6 +426,99 @@ export default function Employees() {
           employee={selectedEmployee}
           onClose={() => setSelectedEmployee(null)}
         />
+
+        {/* ALERT DETAIL DIALOG */}
+        <Dialog open={!!selectedAlert} onOpenChange={() => setSelectedAlert(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {selectedAlert?.type === 'burnout' && 'High Burnout Risk Alert'}
+                {selectedAlert?.type === 'fitment' && 'Low Fitment Alert'}
+                {selectedAlert?.type === 'utilization' && 'Underutilized Talent Alert'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold">{selectedAlert?.employee}</h4>
+                <p className="text-sm text-gray-600 mt-1">{selectedAlert?.details}</p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-semibold">Recommended Actions:</h4>
+                <ul className="list-disc list-inside text-sm space-y-1">
+                  {selectedAlert?.type === 'burnout' && (
+                    <>
+                      <li>Schedule wellness check-in within 48 hours</li>
+                      <li>Review current workload and redistribute tasks</li>
+                      <li>Consider temporary reduction in responsibilities</li>
+                    </>
+                  )}
+                  {selectedAlert?.type === 'fitment' && (
+                    <>
+                      <li>Assess skill gaps and provide training opportunities</li>
+                      <li>Consider role adjustment or internal mobility</li>
+                      <li>Schedule performance coaching session</li>
+                    </>
+                  )}
+                  {selectedAlert?.type === 'utilization' && (
+                    <>
+                      <li>Identify additional responsibilities or projects</li>
+                      <li>Explore cross-training opportunities</li>
+                      <li>Review career development goals</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => {
+                  toast({
+                    title: "Action Initiated",
+                    description: `Intervention plan created for ${selectedAlert?.employee}`,
+                  });
+                  setSelectedAlert(null);
+                }}>
+                  Create Intervention Plan
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedAlert(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* AT-RISK EMPLOYEE DETAIL DIALOG */}
+        <Dialog open={!!selectedAtRiskEmployee} onOpenChange={() => setSelectedAtRiskEmployee(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Employee Risk Assessment</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold">{selectedAtRiskEmployee?.name}</h4>
+                <p className="text-sm text-gray-600 mt-1">Risk Level: {selectedAtRiskEmployee?.risk}</p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-semibold">Risk Factors:</h4>
+                <ul className="list-disc list-inside text-sm space-y-1">
+                  <li>Low productivity metrics</li>
+                  <li>High fatigue indicators</li>
+                  <li>Potential skill gaps</li>
+                </ul>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => {
+                  setSelectedEmployee(centralEmployees.find(emp => emp.name === selectedAtRiskEmployee?.name));
+                  setSelectedAtRiskEmployee(null);
+                }}>
+                  View Full Profile
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedAtRiskEmployee(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
