@@ -50,6 +50,22 @@ export default function Employees() {
   const kpis = useMemo(() => getWorkforceKPIs(), []);
   const aiSignals = useMemo(() => getAISignals(), []);
 
+  // Parse URL query parameters
+  useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const dept = params.get("department");
+    const riskParam = params.get("risk");
+
+    if (dept) {
+      setFilters(prev => ({ ...prev, department: dept }));
+      setShowFilters(true);
+    }
+    if (riskParam === "fatigue") {
+      setFilters(prev => ({ ...prev, risk: "HIGH" })); // Set to HIGH as a default for fatigue redirection
+      setShowFilters(true);
+    }
+  });
+
   const kpiCards = useMemo(() => [
     {
       title: "Total Employees",
@@ -86,11 +102,26 @@ export default function Employees() {
   ], [kpis]);
 
   const filtered = useMemo(() => {
-    return centralEmployees.filter((e) =>
-      e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.employeeId.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [search]);
+    const params = new URLSearchParams(window.location.search);
+    const isFatigueRisk = params.get("risk") === "fatigue";
+
+    return centralEmployees.filter((e) => {
+      const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
+        e.employeeId.toLowerCase().includes(search.toLowerCase());
+      const matchesDept = !filters.department || e.department === filters.department;
+
+      // Handle the generic risk filter vs the specific fatigue redirection
+      let matchesRisk = !filters.risk || getOverallRisk(e).toUpperCase() === filters.risk;
+      if (isFatigueRisk && !filters.risk) {
+        matchesRisk = e.scores.fatigue >= 50;
+      }
+
+      const matchesFitMin = !filters.fitmentMin || e.scores.fitment >= parseInt(filters.fitmentMin);
+      const matchesFitMax = !filters.fitmentMax || e.scores.fitment <= parseInt(filters.fitmentMax);
+
+      return matchesSearch && matchesDept && matchesRisk && matchesFitMin && matchesFitMax;
+    });
+  }, [search, filters]);
 
   const getFitmentColor = (score) => {
     if (score >= 85) return "bg-green-100 text-green-800";

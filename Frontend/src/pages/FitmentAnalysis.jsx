@@ -27,7 +27,12 @@ export default function FitmentAnalysis() {
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [processFilter, setProcessFilter] = useState("All Departments");
-  const [fitmentFilter, setFitmentFilter] = useState("All Fitment Status");
+  const [fitmentFilter, setFitmentFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const filter = params.get("filter");
+    if (filter === "low-fitment") return "Unfit";
+    return "All Fitment Status";
+  });
 
   const distribution = useMemo(() => {
     const counts = { "Unfit": 0, "Train-to-Fit": 0, "Fit": 0, "Overfit": 0 };

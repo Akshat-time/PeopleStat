@@ -4,8 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Brain,
   MessageCircle,
@@ -23,9 +37,15 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  ArrowRight,
+  Info,
+  Lightbulb,
+  Target,
+  ChevronRight,
 } from "lucide-react";
 import { employees as initialEmployees, getOverallRisk } from "@/data/mockEmployeeData";
 import { useAuth } from "@/lib/auth";
+import EmployeeDrawer from "@/components/EmployeeDrawer";
 
 export default function Softskills() {
   const { user } = useAuth();
@@ -39,410 +59,833 @@ export default function Softskills() {
   }, [isEmployee, user]);
 
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [activeModal, setActiveModal] = useState(null); // 'summary', 'health', 'trait', 'alert', 'opportunity'
+  const [modalData, setModalData] = useState(null);
+
+  // Derived Metrics Logic
+  const calculateTraits = (emps) => {
+    const total = emps.length || 1;
+    const scores = emps.reduce((acc, e) => {
+      acc.communication += e.scores.skill;
+      acc.teamwork += (e.scores.skill + e.scores.aptitude) / 2;
+      acc.leadership += e.scores.aptitude;
+      acc.empathy += (e.scores.skill + (100 - e.scores.fatigue)) / 2;
+      acc.stressResilience += 100 - e.scores.fatigue;
+      acc.learningAgility += (e.scores.skill + 2 * e.scores.aptitude) / 3;
+      return acc;
+    }, {
+      communication: 0,
+      teamwork: 0,
+      leadership: 0,
+      empathy: 0,
+      stressResilience: 0,
+      learningAgility: 0
+    });
+
+    return {
+      communication: Math.round(scores.communication / total),
+      teamwork: Math.round(scores.teamwork / total),
+      leadership: Math.round(scores.leadership / total),
+      empathy: Math.round(scores.empathy / total),
+      stressResilience: Math.round(scores.stressResilience / total),
+      learningAgility: Math.round(scores.learningAgility / total),
+    };
+  };
+
+  const traitScores = useMemo(() => calculateTraits(centralEmployees), [centralEmployees]);
 
   const teamHealth = useMemo(() => {
-    const avgSkill = centralEmployees.reduce((sum, e) => sum + e.scores.skill, 0) / centralEmployees.length;
+    const avgScore = Math.round(Object.values(traitScores).reduce((a, b) => a + b, 0) / 6);
     return {
-      score: Math.round(avgSkill),
-      max: 100,
+      score: avgScore,
+      status: avgScore > 80 ? "Optimized" : avgScore > 60 ? "Stable" : "Critical",
+      history: [78, 80, 82, 81, 83], // Mock history for trend
       skills: [
-        { name: "Communication", level: "Strong", color: "bg-green-500" },
-        { name: "Emotional Intelligence", level: "Strong", color: "bg-green-500" },
-        { name: "Collaboration", level: "Medium", color: "bg-yellow-500" },
-        { name: "Stress Resilience", level: "Medium", color: "bg-yellow-500" },
-        { name: "Leadership", level: "Strong", color: "bg-green-500" },
-      ],
+        { name: "Communication", level: traitScores.communication > 80 ? "Strong" : "Standard", color: "bg-blue-500" },
+        { name: "Leadership", level: traitScores.leadership > 80 ? "Strong" : "Standard", color: "bg-amber-500" },
+        { name: "Empathy", level: traitScores.empathy > 80 ? "Strong" : "Standard", color: "bg-green-500" },
+        { name: "Resilience", level: traitScores.stressResilience > 80 ? "Strong" : "Standard", color: "bg-red-500" },
+      ]
     };
-  }, []);
+  }, [traitScores]);
 
-  const traits = useMemo(() => {
-    return [
-      { name: "Communication", score: Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.skill, 0) / centralEmployees.length), benchmark: 72, trend: "up", icon: MessageCircle },
-      { name: "Teamwork", score: 82, benchmark: 80, trend: "up", icon: Users },
-      { name: "Leadership", score: Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.aptitude, 0) / centralEmployees.length), benchmark: 75, trend: "up", icon: Shield },
-      { name: "Empathy", score: 85, benchmark: 82, trend: "up", icon: Heart },
-      { name: "Stress Resilience", score: 100 - Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.fatigue, 0) / centralEmployees.length), benchmark: 79, trend: "down", icon: Zap },
-      { name: "Learning Agility", score: Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.aptitude, 0) / centralEmployees.length), benchmark: 85, trend: "up", icon: Brain },
-    ];
-  }, []);
+  const traits = useMemo(() => [
+    {
+      id: "communication",
+      name: "Communication",
+      score: traitScores.communication,
+      benchmark: 78,
+      trend: "up",
+      icon: MessageCircle,
+      definition: "Ability to convey complex information clearly and listen actively across diverse teams.",
+      impact: "Low scores lead to misalignment, project delays, and decreased morale.",
+      coaching: "Workshops on non-verbal cues and structured feedback loops."
+    },
+    {
+      id: "teamwork",
+      name: "Teamwork",
+      score: traitScores.teamwork,
+      benchmark: 82,
+      trend: "up",
+      icon: Users,
+      definition: "Effective collaboration and contribution towards collective organizational goals.",
+      impact: "Poor teamwork creates silos and increases individual burnout.",
+      coaching: "Cross-departmental shadowing and team-bonding retrospectives."
+    },
+    {
+      id: "leadership",
+      name: "Leadership",
+      score: traitScores.leadership,
+      benchmark: 75,
+      trend: "up",
+      icon: Shield,
+      definition: "Capability to inspire, guide, and mentor others while taking accountability for outcomes.",
+      impact: "Weak leadership results in high turnover and lack of strategic direction.",
+      coaching: "Situational leadership coaching and decision-making simulations."
+    },
+    {
+      id: "empathy",
+      name: "Empathy",
+      score: traitScores.empathy,
+      benchmark: 80,
+      trend: "up",
+      icon: Heart,
+      definition: "Understanding and sharing the feelings of colleagues to build psychological safety.",
+      impact: "Lack of empathy causes toxic work environments and reduced trust.",
+      coaching: "Active listening training and inclusive culture workshops."
+    },
+    {
+      id: "resilience",
+      name: "Stress Resilience",
+      score: traitScores.stressResilience,
+      benchmark: 85,
+      trend: "down",
+      icon: Zap,
+      definition: "Maintaining performance and composure under high-pressure or uncertain conditions.",
+      impact: "Low resilience triggers absenteeism and long-term health leaves.",
+      coaching: "Mindfulness sessions and workload management training."
+    },
+    {
+      id: "agility",
+      name: "Learning Agility",
+      score: traitScores.learningAgility,
+      benchmark: 80,
+      trend: "up",
+      icon: Brain,
+      definition: "Speed and flexibility in acquiring new skills and adapting to changing environments.",
+      impact: "Ignoring agility leads to skill stagnation and technological obsolescence.",
+      coaching: "Self-paced learning allowances and experimental project assignments."
+    },
+  ], [traitScores]);
 
   const riskSignals = useMemo(() => {
     const highBurnout = centralEmployees.filter(e => e.scores.fatigue > 80);
-    const lowLeadership = centralEmployees.filter(e => e.scores.aptitude < 60);
-    const traineeCandidates = centralEmployees.filter(e => e.scores.fitment < 70);
+    const skillGap = centralEmployees.filter(e => e.scores.fitment < 70);
+    const lowLeadership = centralEmployees.filter(e => e.scores.aptitude < 65);
+    const criticalAttrition = centralEmployees.filter(e => e.scores.fatigue > 85 && e.scores.utilization > 90);
 
     return [
-      { title: "High Burnout Risk", count: highBurnout.length, employees: highBurnout.slice(0, 3).map(e => `${e.name} (${e.scores.fatigue}%)`) },
-      { title: "Skill Gap Alert", count: traineeCandidates.length, employees: traineeCandidates.slice(0, 3).map(e => `${e.name} (${e.scores.fitment}%)`) },
-      { title: "Low Leadership Score", count: lowLeadership.length, employees: lowLeadership.slice(0, 3).map(e => `${e.name} (${e.scores.aptitude}%)`) },
-      { title: "Critical Attrition", count: 2, employees: ["Sarah Johnson", "Ramesh Kumar"] },
+      {
+        id: "burnout",
+        title: "High Burnout Risk",
+        count: highBurnout.length,
+        employees: highBurnout,
+        color: "bg-red-50 border-red-200 text-red-700 font-bold",
+        cause: "Chronic over-utilization (>95%) over the last quarter.",
+        severity: "Critical - Requires immediate redistribution of high-intensity tasks.",
+        action: "Initiate mandatory 2-day recovery break and reassign urgent vendor reconciliations."
+      },
+      {
+        id: "gap",
+        title: "Skill Gap Alert",
+        count: skillGap.length,
+        employees: skillGap,
+        color: "bg-amber-50 border-amber-200 text-amber-700 font-bold",
+        cause: "Emerging technological shifts in DevOps and Cloud management.",
+        severity: "Medium - Strategic misalignment in Engineering department.",
+        action: "Enroll in AWS/GCP certification paths and assign internal mentorship."
+      },
+      {
+        id: "leadership",
+        title: "Low Leadership Score",
+        count: lowLeadership.length,
+        employees: lowLeadership,
+        color: "bg-orange-50 border-orange-200 text-orange-700 font-bold",
+        cause: "Limited exposure to cross-functional team lead responsibilities.",
+        severity: "Observation - Talent stalling at mid-professional level.",
+        action: "Schedule Situational Leadership training and assign to lead 1 small-scale internal project."
+      },
+      {
+        id: "attrition",
+        title: "Critical Attrition",
+        count: criticalAttrition.length,
+        employees: criticalAttrition,
+        color: "bg-red-100 border-red-300 text-red-900 font-bold",
+        cause: "Combined high fatigue and top-tier fitment makes them prime poaching targets.",
+        severity: "Immediate - Operational risk to 'Monthly Close' processes.",
+        action: "Schedule Retention 1-on-1 and review salary/benefits alignment within 48 hours."
+      },
     ];
-  }, []);
+  }, [centralEmployees]);
 
-  const recommendations = useMemo(() => {
-    const promoReady = centralEmployees.filter(e => e.scores.fitment > 90);
-    const coachingReq = centralEmployees.filter(e => e.scores.fatigue > 70);
+  const opportunities = useMemo(() => {
+    const promoReady = centralEmployees.filter(e => e.scores.fitment >= 90 && e.scores.fatigue < 50);
+    const coachingReq = centralEmployees.filter(e => e.scores.skill < 75);
+    const reassignment = centralEmployees.filter(e => e.scores.skill > 85 && e.scores.fitment < 75);
+    const leadershipPipe = centralEmployees.filter(e => e.scores.aptitude > 85 && e.scores.fitment >= 80);
+
     return [
-      { title: "Promotion Ready", employees: promoReady.slice(0, 3).map(e => e.name) },
-      { title: "Coaching Required", employees: coachingReq.slice(0, 3).map(e => e.name) },
-      { title: "Role Reassignment", employees: ["James Wilson", "Robert Taylor"] },
-      { title: "Leadership Pipeline", employees: ["Priya Sharma", "Sarah Johnson"] },
+      {
+        id: "promo",
+        title: "Promotion Ready",
+        count: promoReady.length,
+        employees: promoReady,
+        color: "border-blue-200 bg-blue-50/50 text-blue-800",
+        reason: "Exceptional role fitment and consistent high productivity metrics.",
+        nextStep: "Prepare case for Cloud Architect / Lead position promotion."
+      },
+      {
+        id: "coach",
+        title: "Coaching Required",
+        count: coachingReq.length,
+        employees: coachingReq,
+        color: "border-blue-200 bg-blue-50/50 text-blue-800",
+        reason: "Significant gap between potential aptitude and realized soft skills.",
+        nextStep: "Assign Executive Presence coach and schedule monthly progress reviews."
+      },
+      {
+        id: "reassign",
+        title: "Role Reassignment",
+        count: reassignment.length,
+        employees: reassignment,
+        color: "border-blue-200 bg-blue-50/50 text-blue-800",
+        reason: "High soft-skill proficiency not aligned with current technical requirements.",
+        nextStep: "Evaluate move to Client Success or Solutions Engineering tracks."
+      },
+      {
+        id: "pipeline",
+        title: "Leadership Pipeline",
+        count: leadershipPipe.length,
+        employees: leadershipPipe,
+        color: "border-blue-200 bg-blue-50/50 text-blue-800",
+        reason: "Demonstrated early signs of strategic thinking and mentoring capabilities.",
+        nextStep: "Nominate for 'Emerging Leaders' corporate program."
+      },
     ];
-  }, []);
-
-  const employeesWithMeta = useMemo(() => {
-    return centralEmployees.map(e => {
-      const risk = getOverallRisk(e);
-      return {
-        ...e,
-        id: e.employeeId,
-        role: e.position,
-        personality: "INTJ-A", // Keeping some placeholder meta for visuals
-        communication: e.scores.skill,
-        leadership: e.scores.aptitude,
-        stress: e.scores.fatigue,
-        teamRisk: Math.round(e.scores.fatigue * 0.4),
-        riskFlag: risk.toLowerCase(),
-        avatar: `https://i.pravatar.cc/40?u=${e.employeeId}`,
-        workStyle: "Collaborative",
-        motivation: "Innovation",
-        burnoutRisk: e.scores.fatigue > 70 ? "High" : e.scores.fatigue > 40 ? "Medium" : "Low",
-        conflictRisk: "Low",
-        attritionRisk: e.scores.fatigue > 80 ? "High" : "Low",
-        currentFit: e.scores.fitment,
-        managerFit: Math.min(100, e.scores.fitment + 5),
-        clientFit: Math.min(100, e.scores.skill + 2),
-        leadershipFit: e.scores.aptitude,
-        strengths: e.skills.hard.join(", "),
-        risks: e.scores.fatigue > 75 ? "High fatigue levels" : "None detected",
-        development: "Leadership tracks",
-      };
-    });
-  }, []);
+  }, [centralEmployees]);
 
   const filteredEmployees = useMemo(() => {
-    return employeesWithMeta.filter(emp =>
-      emp.name.toLowerCase().includes(search.toLowerCase()) &&
-      (filter === "All" || emp.riskFlag === filter)
+    return centralEmployees.filter(emp =>
+      emp.name.toLowerCase().includes(search.toLowerCase()) ||
+      emp.employeeId.toLowerCase().includes(search.toLowerCase())
     );
-  }, [search, filter, employeesWithMeta]);
+  }, [search, centralEmployees]);
 
-  const handleEmployeeClick = (employee) => {
-    setSelectedEmployee(employee);
-    setIsProfileOpen(true);
+  const getScoreBadge = (score) => {
+    if (score >= 85) return "bg-blue-100 text-blue-700 border-blue-200 font-bold";
+    if (score >= 70) return "bg-green-100 text-green-700 border-green-200 font-medium";
+    if (score >= 50) return "bg-amber-100 text-amber-700 border-amber-200";
+    return "bg-red-100 text-red-700 border-red-200";
   };
 
-  const getRiskColor = (flag) => {
-    switch (flag) {
-      case "low": return "bg-green-100 text-green-800";
-      case "medium": return "bg-yellow-100 text-yellow-800";
-      case "high": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getRiskIcon = (flag) => {
-    switch (flag) {
-      case "low": return <CheckCircle className="w-4 h-4" />;
-      case "medium": return <Clock className="w-4 h-4" />;
-      case "high": return <XCircle className="w-4 h-4" />;
-      default: return <AlertTriangle className="w-4 h-4" />;
-    }
+  const getScoreLabel = (score) => {
+    if (score >= 85) return "EXPERT";
+    if (score >= 70) return "PROFICIENT";
+    if (score >= 55) return "DEVELOPING";
+    return "IMMEDIATE FOCUS";
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 font-['Inter']">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex justify-between items-start">
+    <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter']">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Soft Skills Intelligence</h1>
-            <p className="text-gray-600 mt-2">Behavioral, cognitive and leadership insights powered by MayaMaya</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Soft Skills Intelligence</h1>
+            <p className="text-slate-500 mt-1">Behavioral assessment and cognitive performance analytics</p>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
+          <div className="flex items-center gap-3">
+            <Button variant="outline" className="border-slate-200 bg-white shadow-sm" onClick={() => setActiveModal('summary')}>
+              <Brain className="mr-2 h-4 w-4 text-blue-600" />
+              Explain Model
             </Button>
           </div>
         </div>
 
-        {/* AI Behavioral Summary */}
+        {/* AI BEHAVIORAL SUMMARY BANNER */}
         {!isEmployee && (
-          <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-indigo-600" />
-                AI Behavioral Summary
-                <Badge variant="secondary" className="ml-2">Based on current workforce dataset</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-gray-700">
-              <p>
-                The current workforce demonstrates a resilient core with an average skill score of {teamHealth.score}%.
-                While leadership potential is strong ({traits[2].score}%), we are monitoring {riskSignals[0].count} high-burnout cases
-                that could impact overall team stability if unaddressed.
-              </p>
-            </CardContent>
+          <Card
+            className="p-8 bg-gradient-to-r from-blue-900 to-slate-900 border-none rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-all group relative overflow-hidden"
+            onClick={() => setActiveModal('summary')}
+          >
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <Brain className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-blue-300 font-bold tracking-wider text-xs uppercase">MayaMaya Cognitive Engine</span>
+                </div>
+                <h2 className="text-3xl font-extrabold tracking-tight italic">Workforce Core Capabilities</h2>
+                <p className="text-slate-300 max-w-2xl text-lg leading-relaxed">
+                  Organizational empathy and communication scores are <span className="text-blue-200 font-bold">8.4% above benchmark</span>. However, stress resilience is trending down in Finance & IT units.
+                </p>
+                <div className="pt-2 flex items-center gap-4 text-sm font-medium">
+                  <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-400" /> Strong Cultural Alignment</span>
+                  <span className="flex items-center gap-1.5"><AlertTriangle className="h-4 w-4 text-amber-400" /> Resilience Warning</span>
+                </div>
+              </div>
+              <ChevronRight className="h-10 w-10 text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+            </div>
+            {/* Visual background element */}
+            <div className="absolute right-[-10px] top-[-20px] opacity-[0.05] group-hover:opacity-[0.1] transition-opacity">
+              <Brain className="h-64 w-64 text-white" />
+            </div>
           </Card>
         )}
 
-        {/* Team Soft Skills Health */}
-        {!isEmployee && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Soft Skills Health</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {/* GLOBAL HEALTH & TRAIT CARDS */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Team Health Card */}
+          <Card
+            className="lg:col-span-4 p-8 bg-white border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all cursor-pointer group"
+            onClick={() => setActiveModal('health')}
+          >
+            <div className="flex flex-col h-full space-y-8">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <div className="relative">
-                    <svg className="w-24 h-24 transform -rotate-90">
-                      <circle cx="48" cy="48" r="36" stroke="#e5e7eb" strokeWidth="8" fill="none" />
-                      <circle
-                        cx="48" cy="48" r="36" stroke="#3b82f6" strokeWidth="8" fill="none"
-                        strokeDasharray={`${2 * Math.PI * 36}`}
-                        strokeDashoffset={`${2 * Math.PI * 36 * (1 - teamHealth.score / teamHealth.max)}`}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{teamHealth.score}</div>
-                        <div className="text-xs text-gray-500">avg</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Global Workforce Health</h3>
-                    <p className="text-sm text-gray-600">Composite soft skill performance</p>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Health Index</h3>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Behavioral Composite</p>
+                </div>
+                <Badge className={`px-4 py-1 text-xs font-black tracking-tighter ${teamHealth.score > 80 ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                  {teamHealth.status.toUpperCase()}
+                </Badge>
+              </div>
+
+              <div className="flex-1 flex items-center justify-center py-4">
+                <div className="relative">
+                  <svg className="w-44 h-44 transform -rotate-90">
+                    <circle cx="88" cy="88" r="78" stroke="#F1F5F9" strokeWidth="12" fill="none" />
+                    <circle
+                      cx="88" cy="88" r="78" stroke="#3B82F6" strokeWidth="12" fill="none"
+                      strokeDasharray={`${2 * Math.PI * 78}`}
+                      strokeDashoffset={`${2 * Math.PI * 78 * (1 - teamHealth.score / 100)}`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-6xl font-black text-slate-900 tracking-tighter">{teamHealth.score}</span>
+                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Global Pts</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  {teamHealth.skills.map((skill, index) => (
-                    <div key={index} className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${skill.color}`}></div>
-                        <span className="text-sm font-medium text-gray-900">{skill.name}</span>
-                      </div>
-                      <Badge variant={skill.level === "Strong" ? "default" : "secondary"} className="text-xs">
-                        {skill.level}
-                      </Badge>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-widest px-1">
+                  <span>Traits Overview</span>
+                  <span className="text-blue-600">Details →</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {teamHealth.skills.map((s, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between group-hover:bg-white transition-colors">
+                      <span className="text-xs font-bold text-slate-700">{s.name}</span>
+                      <div className={`w-2 h-2 rounded-full ${s.color}`} />
                     </div>
                   ))}
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
-        )}
 
-        {/* Trait Benchmark Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {traits.map((trait, index) => (
-            <Card key={index}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <trait.icon className="w-5 h-5 text-blue-600" />
-                  {trait.trend === "up" ? (
-                    <TrendingUp className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4 text-red-600" />
-                  )}
+          {/* Trait Cards */}
+          <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {traits.map((trait) => (
+              <Card
+                key={trait.id}
+                className="p-6 bg-white border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group relative overflow-hidden"
+                onClick={() => {
+                  setActiveModal('trait');
+                  setModalData(trait);
+                }}
+              >
+                <div className="flex items-start justify-between mb-8 relative z-10">
+                  <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-blue-50 transition-colors">
+                    <trait.icon className="h-6 w-6 text-slate-500 group-hover:text-blue-600" />
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <Badge variant="outline" className={`border-none px-1 text-[10px] font-black tracking-widest ${trait.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                      {trait.trend === 'up' ? '▲ GAINING' : '▼ DROPPING'}
+                    </Badge>
+                  </div>
                 </div>
-                <h4 className="text-xs font-semibold text-gray-600 mb-1">{trait.name}</h4>
-                <div className="text-2xl font-bold text-blue-600 mb-1">{trait.score}%</div>
-                <p className="text-[10px] text-gray-400">Industry: {trait.benchmark}%</p>
-              </CardContent>
-            </Card>
-          ))}
+
+                <div className="relative z-10">
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none mb-1">{trait.name}</p>
+                  <div className="flex items-baseline gap-2">
+                    <h4 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">{trait.score}%</h4>
+                    <span className="text-[10px] font-bold text-slate-300">IND: {trait.benchmark}%</span>
+                  </div>
+                </div>
+                {/* Background icon trace */}
+                <trait.icon className="absolute right-[-20px] bottom-[-20px] h-32 w-32 text-slate-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Card>
+            ))}
+          </div>
         </div>
 
-        {/* Employee Assessment Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Employee Assessment Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+        {/* EMPLOYEE PERFORMANCE TABLE */}
+        <Card className="border-slate-200 rounded-2xl shadow-sm overflow-hidden bg-white">
+          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Behavioral Assessment Overview</h2>
+              <p className="text-slate-500 text-sm">Granular soft-skill breakdown across workforce</p>
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-initial">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="Search employees..."
+                  placeholder="Search assets..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-9 h-10 border-slate-200 w-full"
                 />
               </div>
-              <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by risk" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Risk Levels</SelectItem>
-                  <SelectItem value="low">Low Risk</SelectItem>
-                  <SelectItem value="medium">Medium Risk</SelectItem>
-                  <SelectItem value="high">High Risk</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Communication</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leadership</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fatigue</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk Flag</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredEmployees.map((emp) => (
-                    <tr key={emp.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleEmployeeClick(emp)}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs uppercase mr-3">
-                            {emp.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{emp.name}</div>
-                            <div className="text-xs text-gray-500">{emp.id}</div>
-                          </div>
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow className="border-slate-100 hover:bg-transparent">
+                  <TableHead className="font-bold text-slate-700 h-12 uppercase text-[10px] tracking-widest">Asset</TableHead>
+                  <TableHead className="font-bold text-slate-700 h-12 uppercase text-[10px] tracking-widest">Comm.</TableHead>
+                  <TableHead className="font-bold text-slate-700 h-12 uppercase text-[10px] tracking-widest">Leadership</TableHead>
+                  <TableHead className="font-bold text-slate-700 h-12 uppercase text-[10px] tracking-widest">Resilience</TableHead>
+                  <TableHead className="font-bold text-slate-700 h-12 uppercase text-[10px] tracking-widest">Adaptability</TableHead>
+                  <TableHead className="font-bold text-slate-700 h-12 uppercase text-[10px] tracking-widest text-right">Alignment</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredEmployees.map((emp) => (
+                  <TableRow
+                    key={emp.employeeId}
+                    className="cursor-pointer hover:bg-slate-50 h-16 transition-colors border-slate-100 group"
+                    onClick={() => setSelectedEmployee(emp)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-[10px] text-slate-500 group-hover:border-blue-300 group-hover:bg-white transition-all">
+                          {emp.name.split(' ').map(n => n[0]).join('')}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{emp.communication}%</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{emp.leadership}%</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{emp.stress}%</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={getRiskColor(emp.riskFlag)}>
-                          {getRiskIcon(emp.riskFlag)}
-                          <span className="ml-1 capitalize">{emp.riskFlag}</span>
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
+                        <div>
+                          <p className="font-bold text-slate-900 leading-none mb-1">{emp.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{emp.position}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1.5 w-24">
+                        <Progress value={emp.scores.skill} className="h-1.5" />
+                        <span className="text-[10px] font-black text-slate-400">{emp.scores.skill}% Proficiency</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`border-none px-2 py-0.5 text-[10px] tracking-tighter ${getScoreBadge(emp.scores.aptitude)}`}>
+                        {getScoreLabel(emp.scores.aptitude)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${emp.scores.fatigue < 40 ? 'bg-blue-500' : emp.scores.fatigue < 70 ? 'bg-amber-500' : 'bg-red-500'}`} />
+                        <span className="text-xs font-bold text-slate-700">{100 - emp.scores.fatigue}% Sustainability</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-bold text-slate-900 tabular-nums">{(emp.scores.skill + emp.scores.aptitude) / 2}%</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="inline-flex items-center gap-1.5 text-blue-600 font-black tracking-tighter text-sm">
+                        {emp.scores.fitment}%
+                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </Card>
 
-        {/* Risk & Talent Signals */}
-        {!isEmployee && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {riskSignals.map((signal, index) => (
-              <Card key={index} className="border-l-4 border-red-500">
-                <CardContent className="p-6">
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">{signal.title}</h4>
-                  <div className="text-2xl font-bold text-red-600 mb-3">{signal.count}</div>
-                  <ul className="space-y-1">
-                    {signal.employees.map((emp, idx) => (
-                      <li key={idx} className="text-xs text-gray-600">{emp}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+        {/* RISK SIGNALS & TALENT OPPORTUNITIES */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+          {/* Alerts Card */}
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+              Critical Behavioral Alerts
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {riskSignals.map((signal) => (
+                <Card
+                  key={signal.id}
+                  className={`p-6 border-l-4 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer group flex flex-col justify-between ${signal.id === 'burnout' || signal.id === 'attrition' ? 'border-l-red-500' : 'border-l-amber-500'} bg-white`}
+                  onClick={() => {
+                    setActiveModal('alert');
+                    setModalData(signal);
+                  }}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">{signal.title}</h4>
+                      <Badge className={signal.color}>{signal.count}</Badge>
+                    </div>
+                    <p className="text-sm text-slate-500 font-medium line-clamp-2 italic">"{signal.action}"</p>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-400 uppercase">Impact Check →</span>
+                    <div className="flex -space-x-2">
+                      {signal.employees.slice(0, 3).map((e, i) => (
+                        <div key={i} className="w-6 h-6 rounded-lg bg-slate-100 border border-white flex items-center justify-center text-[10px] font-black text-slate-500">
+                          {e.name[0]}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
-        )}
 
-        {/* AI Coaching & Workforce Recommendations */}
-        {!isEmployee && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {recommendations.map((rec, index) => (
-              <Card key={index} className="border-l-4 border-blue-500">
-                <CardContent className="p-6">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">{rec.title}</h4>
-                  <ul className="space-y-2">
-                    {rec.employees.map((emp, idx) => (
-                      <li key={idx} className="text-sm text-gray-700 flex items-center">
-                        <User className="w-4 h-4 mr-2 text-gray-400" />
-                        {emp}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+          {/* Opportunities Card */}
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <Target className="h-6 w-6 text-blue-600" />
+              Strategic Talent Pipeline
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {opportunities.map((opp) => (
+                <Card
+                  key={opp.id}
+                  className="p-6 border rounded-xl shadow-sm hover:shadow-md hover:translate-y-[-4px] transition-all cursor-pointer bg-white group flex flex-col justify-between border-slate-200"
+                  onClick={() => {
+                    setActiveModal('opportunity');
+                    setModalData(opp);
+                  }}
+                >
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-black text-slate-900 tracking-tight">{opp.title}</h4>
+                      <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600 font-black text-xs">
+                        {opp.count}
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">{opp.nextStep}</p>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between relative z-10">
+                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Review Candidates →</span>
+                    <TrendingUp className="h-4 w-4 text-blue-300 group-hover:text-blue-600 transition-colors" />
+                  </div>
+                  {/* Subtle highlight bar */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Card>
+              ))}
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Employee Profile Modal */}
-      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* MODALS */}
+
+      {/* 1. Summary Modal - Explain Model */}
+      <Dialog open={activeModal === 'summary'} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Behavioral Intelligence Profile</DialogTitle>
+            <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">MayaMaya Evaluation Framework</DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium">How we measure behavioral intelligence at scale.</DialogDescription>
           </DialogHeader>
-          {selectedEmployee && (
-            <div className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xl uppercase">
-                  {selectedEmployee.name.split(' ').map(n => n[0]).join('')}
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{selectedEmployee.name}</h3>
-                  <p className="text-sm text-gray-600">{selectedEmployee.role}</p>
-                  <p className="text-sm text-gray-500 font-mono text-xs">{selectedEmployee.id}</p>
-                </div>
+          <div className="py-8 space-y-8">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-4 bg-slate-900 rounded-2xl text-white text-center">
+                <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Source data</p>
+                <p className="text-xl font-black font-mono tracking-tighter">AI-V1.2</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-bold uppercase text-gray-500 tracking-wider">Fitment</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-black text-blue-600">{selectedEmployee.scores.fitment}%</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-bold uppercase text-gray-500 tracking-wider">Fatigue</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-black ${selectedEmployee.scores.fatigue > 75 ? 'text-red-600' : 'text-slate-900'}`}>{selectedEmployee.scores.fatigue}%</div>
-                  </CardContent>
-                </Card>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Update rate</p>
+                <p className="text-xl font-black text-slate-900">Weekly</p>
               </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-bold">Behavioral Assessment Overview</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {Object.entries(selectedEmployee.scores).filter(([k]) => ['skill', 'aptitude', 'productivity', 'utilization'].includes(k)).map(([key, val]) => (
-                    <div key={key}>
-                      <div className="flex justify-between text-xs font-bold uppercase text-gray-500 mb-1">
-                        <span>{key}</span>
-                        <span>{val}%</span>
-                      </div>
-                      <Progress value={val} className="h-2" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-bold text-blue-700">AI Logic Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm italic text-gray-600 border-l-4 border-blue-500 pl-4 bg-blue-50 py-3">
-                  "Individual shows strong capability in {selectedEmployee.strengths}. Recommendation: focus on {selectedEmployee.development}."
-                </CardContent>
-              </Card>
-
-              <div className="flex gap-3 pt-4">
-                <Button className="flex-1">Assign Growth Module</Button>
-                <Button variant="outline" className="flex-1">Initiate Review</Button>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Confidence</p>
+                <p className="text-xl font-black text-green-600">94%</p>
               </div>
             </div>
-          )}
+
+            <div className="space-y-6">
+              <div className="flex gap-4 items-start">
+                <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+                  <Lightbulb className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900">Behavioral Vectors</h4>
+                  <p className="text-sm text-slate-500 leading-relaxed mt-1">Our model derives soft skills from communication tone (Skill Score), collaborative frequency (Teamwork), and goal-oriented behaviors (Aptitude).</p>
+                </div>
+              </div>
+              <div className="flex gap-4 items-start">
+                <div className="p-2 bg-purple-100 rounded-lg shrink-0">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900">Recovery Benchmarking</h4>
+                  <p className="text-sm text-slate-500 leading-relaxed mt-1">Sustainability and Resilience scores are negatively correlated with 'Fatigue Velocity' and 'Utilisation Clutter'.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl">
+              <h4 className="font-black text-xs text-blue-900 uppercase tracking-widest mb-3">Primary Insights</h4>
+              <ul className="space-y-3 text-sm font-medium text-slate-700">
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /> High-performing units have 12% lower meeting density.</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /> Promotion-ready talent scores &gt;85% on Learning Agility.</li>
+                <li className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-500" /> Burnout risk is highest in top 5% of technical performers.</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button className="w-full bg-slate-900 hover:bg-black text-white font-black" onClick={() => setActiveModal(null)}>
+              Return to Intelligence Dashboard
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 2. Team Health Detail Modal */}
+      <Dialog open={activeModal === 'health'} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">Workforce Health Topology</DialogTitle>
+          </DialogHeader>
+          <div className="py-8 space-y-8">
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Global Health Index</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-6xl font-black text-slate-900 tracking-tighter">{teamHealth.score}</span>
+                  <span className="text-green-600 font-bold">▲ 2.1%</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Evaluation status</p>
+                <Badge className="bg-blue-600 text-white font-black px-4 py-1 tracking-widest uppercase text-[10px]">
+                  {teamHealth.status}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Departmental Behavioral Health</h4>
+              {[
+                { name: "Engineering", score: 82, trend: "Stable" },
+                { name: "Finance", score: 68, trend: "At Risk" },
+                { name: "IT & Infrastructure", score: 74, trend: "Neutral" },
+                { name: "HR & Analytics", score: 91, trend: "Growth" },
+              ].map((dept, i) => (
+                <div key={i} className="flex items-center justify-between p-4 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors">
+                  <span className="font-bold text-slate-900">{dept.name}</span>
+                  <div className="flex items-center gap-4">
+                    <Progress value={dept.score} className="w-24 h-1.5" />
+                    <span className="w-12 text-right font-black text-sm text-slate-700">{dept.score}%</span>
+                    <Badge variant="outline" className={`border-none px-0 text-[10px] font-bold ${dept.trend === 'At Risk' ? 'text-red-500' : 'text-blue-500'}`}>
+                      {dept.trend.toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+              <p className="text-xs text-amber-800/80 font-medium leading-relaxed">
+                <span className="font-black">Strategy Recommendation:</span> We noticed a recurring behavioral dip in Finance during 'Monthly Close'. Recommend deploying high-resilience floaters from HR/Analytics during peak cycles.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 3. Trait Deep Dive Modal */}
+      <Dialog open={activeModal === 'trait'} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">{modalData?.name} Profile</DialogTitle>
+          </DialogHeader>
+          <div className="py-8 space-y-8">
+            <div className="flex items-center justify-between p-6 bg-slate-900 rounded-2xl text-white">
+              <div>
+                <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Workforce Avg</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-6xl font-black tracking-tighter tabular-nums">{modalData?.score}%</span>
+                  <span className={`text-xs font-bold ${modalData?.trend === 'up' ? 'text-green-400' : 'text-red-400'}`}>
+                    {modalData?.trend === 'up' ? '▲' : '▼'} {Math.abs(modalData?.score - (modalData?.benchmark || 0))} pts
+                  </span>
+                </div>
+              </div>
+              {modalData?.icon && <modalData.icon className="h-16 w-16 text-blue-500/50" />}
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-5 border border-slate-100 rounded-2xl bg-slate-50/50">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <Info className="h-3 w-3" /> Definition & Scope
+                </h4>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">{modalData?.definition}</p>
+              </div>
+
+              <div className="p-5 border border-red-100 rounded-2xl bg-red-50/20">
+                <h4 className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <AlertTriangle className="h-3 w-3" /> Potential Risk Impact
+                </h4>
+                <p className="text-sm text-red-900/70 font-medium leading-relaxed">{modalData?.impact}</p>
+              </div>
+
+              <div className="p-5 border border-green-100 rounded-2xl bg-green-50/20">
+                <h4 className="text-[10px] font-black text-green-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <Target className="h-3 w-3" /> Suggested Interventions
+                </h4>
+                <p className="text-sm text-green-900/70 font-medium leading-relaxed italic">"{modalData?.coaching}"</p>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Focus Individuals</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {centralEmployees.sort((a, b) => b.scores.skill - a.scores.skill).slice(0, 4).map((e, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 border border-slate-100 rounded-xl text-xs font-bold text-slate-700 bg-white shadow-sm">
+                    <span>{e.name}</span>
+                    <span className="text-blue-600">{e.scores.skill}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 4. Alert / Signal Modal */}
+      <Dialog open={activeModal === 'alert'} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">{modalData?.title} Detail</DialogTitle>
+          </DialogHeader>
+          <div className="py-8 space-y-8">
+            <div className="p-6 bg-red-100 border border-red-200 rounded-2xl">
+              <h4 className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-2">Detected Anomaly</h4>
+              <p className="text-xl font-bold text-red-900 leading-tight">{modalData?.cause}</p>
+              <div className="mt-4 flex items-center gap-2 text-red-700">
+                <Badge variant="outline" className="border-red-400 text-red-800 font-black tracking-widest uppercase text-[10px]">
+                  Severity: {modalData?.severity?.split(' ')[0]}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Impacted Global Assets ({modalData?.count})</h4>
+              <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                {modalData?.employees?.map(emp => (
+                  <div key={emp.employeeId} className="flex items-center justify-between p-4 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 border border-red-100 flex items-center justify-center font-bold text-[10px]">
+                        {emp.name[0]}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm leading-none">{emp.name}</p>
+                        <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase">{emp.position}</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-white border-slate-200 text-slate-600 font-black text-[10px] tracking-tighter">
+                      {emp.scores?.fatigue}% Fatigue
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-900 rounded-2xl text-white shadow-lg space-y-4">
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-blue-400" />
+                <h4 className="text-xs font-black text-blue-400 uppercase tracking-widest">Mandatory Executive Action</h4>
+              </div>
+              <p className="font-bold underline decoration-blue-500 decoration-2 underline-offset-4 text-lg">"{modalData?.action}"</p>
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs h-12 shadow-lg shadow-blue-900/20">
+                Confirm Execution Protocol
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 5. Opportunity Pipeline Modal */}
+      <Dialog open={activeModal === 'opportunity'} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">{modalData?.title} Review</DialogTitle>
+          </DialogHeader>
+          <div className="py-8 space-y-8">
+            <div className="p-6 bg-blue-900 rounded-2xl text-white">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-[10px] font-black text-blue-200 uppercase tracking-widest">Candidate pipeline</h4>
+                <Badge className="bg-blue-500 text-white border-none">{modalData?.count}</Badge>
+              </div>
+              <p className="text-2xl font-black tracking-tight leading-tight">{modalData?.reason}</p>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Qualified Assets</h4>
+              <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                {modalData?.employees?.map(emp => (
+                  <div key={emp.employeeId} className="flex items-center justify-between p-4 border border-slate-100 rounded-2xl hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer group" onClick={() => {
+                    setSelectedEmployee(emp);
+                    setActiveModal(null);
+                  }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center font-black text-blue-700">
+                        {emp.name[0]}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm leading-none">{emp.name}</p>
+                        <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tight">{emp.department}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge className="bg-green-100 text-green-700 border-green-200 font-black text-[10px] tracking-widest">
+                        {emp.scores?.fitment}% FITMENT
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Strategic Next Step</h4>
+              <div className="flex items-center gap-4 p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                <div className="p-3 bg-blue-50 rounded-xl">
+                  <ArrowRight className="h-5 w-5 text-blue-600" />
+                </div>
+                <p className="text-sm font-black text-slate-800 italic">"{modalData?.nextStep}"</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Button className="h-12 bg-slate-900 font-black text-xs tracking-widest uppercase hover:bg-black">View Full Batch</Button>
+              <Button className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs tracking-widest uppercase shadow-lg shadow-blue-100">Initiate Workflow</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DRAWER COMPONENT */}
+      <EmployeeDrawer
+        employee={selectedEmployee}
+        onClose={() => setSelectedEmployee(null)}
+      />
     </div>
   );
 }
