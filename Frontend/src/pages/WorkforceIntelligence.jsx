@@ -20,18 +20,53 @@ import {
   Activity,
   Award,
   ChevronRight,
+  TrendingUp as TrendingUpIcon,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import { employees as centralEmployees } from "@/data/mockEmployeeData";
 
 export default function WorkforceIntelligence() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const [activeSheet, setActiveSheet] = useState(null); // 'workforce', 'performance', 'utilization', 'salary'
+  const [activeDialog, setActiveDialog] = useState(null); // 'skill-gap', 'productivity'
 
   const kpiMetrics = useMemo(() => {
     const avgPerf = centralEmployees.reduce((sum, e) => sum + e.scores.productivity, 0) / centralEmployees.length;
     return [
       {
+        id: "workforce",
         title: "Total Workforce",
         value: centralEmployees.length.toLocaleString(),
         change: "+2.4%",
@@ -40,6 +75,7 @@ export default function WorkforceIntelligence() {
         color: "blue",
       },
       {
+        id: "performance",
         title: "Avg Performance Score",
         value: avgPerf.toFixed(1),
         change: "+5.1%",
@@ -48,6 +84,7 @@ export default function WorkforceIntelligence() {
         color: "green",
       },
       {
+        id: "utilization",
         title: "Utilization Rate",
         value: `${(centralEmployees.reduce((sum, e) => sum + e.scores.utilization, 0) / centralEmployees.length).toFixed(1)}%`,
         change: "+12.8%",
@@ -56,6 +93,7 @@ export default function WorkforceIntelligence() {
         color: "purple",
       },
       {
+        id: "salary",
         title: "Salary Asset Value",
         value: `$${(centralEmployees.reduce((sum, e) => sum + e.salary, 0) / 1000000).toFixed(1)}M`,
         change: "+8.3%",
@@ -72,12 +110,14 @@ export default function WorkforceIntelligence() {
       const emps = centralEmployees.filter(e => e.department === dept);
       const perf = Math.round(emps.reduce((sum, e) => sum + e.scores.productivity, 0) / emps.length);
       const utils = Math.round(emps.reduce((sum, e) => sum + e.scores.utilization, 0) / emps.length);
+      const salary = emps.reduce((sum, e) => sum + e.salary, 0);
       const riskCount = emps.filter(e => e.scores.fatigue > 75).length;
       return {
         name: dept,
         headcount: emps.length,
         performance: perf,
         utilization: utils,
+        salary: salary,
         risk: riskCount > 2 ? "High" : riskCount > 0 ? "Medium" : "Low",
       };
     }).sort((a, b) => b.performance - a.performance);
@@ -120,6 +160,7 @@ export default function WorkforceIntelligence() {
     {
       type: "critical",
       title: "Skill Gap Alert",
+      id: "skill-gap",
       description: `Detected ${predictiveInsights[2].value} requiring immediate training in core competencies.`,
       impact: "High",
       action: "View Hiring Plan",
@@ -128,6 +169,7 @@ export default function WorkforceIntelligence() {
     {
       type: "opportunity",
       title: "Utilization Optimization",
+      id: "utilization-opt",
       description: "Excess capacity found in Finance; redistribution could save 15% in operational costs.",
       impact: "Medium",
       action: "Start Implementation",
@@ -136,6 +178,7 @@ export default function WorkforceIntelligence() {
     {
       type: "success",
       title: "Productivity Milestone",
+      id: "productivity",
       description: `Overall workforce performance is up by 5.1% compared to last quarter.`,
       impact: "High",
       action: "View Details",
@@ -163,10 +206,10 @@ export default function WorkforceIntelligence() {
 
   const getPredictiveColor = (color) => {
     switch (color) {
-      case "red": return "bg-red-100 border-red-300";
-      case "green": return "bg-green-100 border-green-300";
-      case "yellow": return "bg-yellow-100 border-yellow-300";
-      case "blue": return "bg-blue-100 border-blue-300";
+      case "red": return "bg-red-100 border-red-300 pointer-events-auto cursor-pointer";
+      case "green": return "bg-green-100 border-green-300 pointer-events-auto cursor-pointer";
+      case "yellow": return "bg-yellow-100 border-yellow-300 pointer-events-auto cursor-pointer";
+      case "blue": return "bg-blue-100 border-blue-300 pointer-events-auto cursor-pointer";
       default: return "bg-gray-100 border-gray-300";
     }
   };
@@ -182,7 +225,11 @@ export default function WorkforceIntelligence() {
         {/* KPI Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {kpiMetrics.map((metric, index) => (
-            <Card key={index} className="p-6 bg-white border-[#E5E7EB] rounded-xl shadow-sm hover:shadow-md transition-shadow">
+            <Card
+              key={index}
+              className="p-6 bg-white border-[#E5E7EB] rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer hover:-translate-y-1"
+              onClick={() => setActiveSheet(metric.id)}
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-xl ${metric.color === 'blue' ? 'bg-blue-100' :
                   metric.color === 'green' ? 'bg-green-100' :
@@ -214,7 +261,15 @@ export default function WorkforceIntelligence() {
           <h2 className="text-2xl font-semibold text-[#0F172A] mb-6">AI Workforce Insights</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {aiInsights.map((insight, index) => (
-              <Card key={index} className={`p-6 border-2 rounded-xl shadow-sm hover:shadow-md transition-shadow ${getInsightColor(insight.type)}`}>
+              <Card
+                key={index}
+                className={`p-6 border-2 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer hover:-translate-y-1 ${getInsightColor(insight.type)}`}
+                onClick={() => {
+                  if (insight.id === 'skill-gap') setActiveDialog('skill-gap');
+                  else if (insight.id === 'productivity') setActiveDialog('productivity');
+                  else if (insight.id === 'utilization-opt') navigate("/optimization");
+                }}
+              >
                 <div className="flex items-start gap-4">
                   <div className={`p-3 rounded-xl bg-white shadow-sm`}>
                     <insight.icon className={`h-6 w-6 ${insight.type === 'critical' ? 'text-red-600' :
@@ -229,18 +284,10 @@ export default function WorkforceIntelligence() {
                       <Badge variant="outline" className="text-xs">
                         {insight.impact} Impact
                       </Badge>
-                      <Button variant="ghost" size="sm" className="text-[#2563EB] hover:text-[#1D4ED8]" onClick={() => {
-                        if (insight.action === "View Hiring Plan") navigate("/gap-analysis");
-                        else if (insight.action === "Start Implementation") {
-                          toast({
-                            title: "Implementation Started",
-                            description: "Automation process has been initiated.",
-                          });
-                        } else if (insight.action === "View Details") navigate("/employees");
-                      }}>
+                      <span className="text-xs font-medium text-[#2563EB] flex items-center">
                         {insight.action}
                         <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -254,7 +301,11 @@ export default function WorkforceIntelligence() {
           <h2 className="text-2xl font-semibold text-[#0F172A] mb-6">Department Performance Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {departmentOverview.map((dept, index) => (
-              <Card key={index} className="p-6 bg-white border-[#E5E7EB] rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <Card
+                key={index}
+                className="p-6 bg-white border-[#E5E7EB] rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer hover:-translate-y-1"
+                onClick={() => navigate(`/employees?department=${dept.name}`)}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-[#0F172A]">{dept.name}</h3>
                   <Badge className={`text-xs font-medium ${getRiskColor(dept.risk)}`}>
@@ -282,6 +333,11 @@ export default function WorkforceIntelligence() {
                     </div>
                     <Progress value={dept.utilization} className="h-2" />
                   </div>
+                  <div className="pt-2 flex justify-end">
+                    <span className="text-xs font-medium text-[#2563EB] flex items-center">
+                      View Team <ChevronRight className="h-3 w-3 ml-1" />
+                    </span>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -293,7 +349,16 @@ export default function WorkforceIntelligence() {
           <h2 className="text-2xl font-semibold text-[#0F172A] mb-6">Predictive Workforce Analytics</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {predictiveInsights.map((insight, index) => (
-              <Card key={index} className={`p-6 border rounded-xl shadow-sm hover:shadow-md transition-shadow ${getPredictiveColor(insight.color)}`}>
+              <Card
+                key={index}
+                className={`p-6 border rounded-xl shadow-sm hover:shadow-md transition-all hover:-translate-y-1 ${getPredictiveColor(insight.color)}`}
+                onClick={() => {
+                  if (insight.title === "Attrition Risk") setActiveDialog("attrition");
+                  else if (insight.title === "Promotion Ready") setActiveDialog("promotion");
+                  else if (insight.title === "Training Needs") navigate("/fitment?filter=low-fitment");
+                  else if (insight.title === "Workload Imbalance") setActiveSheet("utilization");
+                }}
+              >
                 <div className="text-center">
                   <h3 className="text-lg font-semibold text-[#0F172A] mb-2">{insight.title}</h3>
                   <p className="text-3xl font-bold text-[#0F172A] mb-2">{insight.value}</p>
@@ -325,6 +390,234 @@ export default function WorkforceIntelligence() {
           </div>
         </Card>
       </div>
+
+      {/* Sheets & Dialogs */}
+      <Sheet open={!!activeSheet} onOpenChange={() => setActiveSheet(null)}>
+        <SheetContent className="sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>
+              {activeSheet === 'workforce' && "Total Workforce Details"}
+              {activeSheet === 'performance' && "Performance Breakdown"}
+              {activeSheet === 'utilization' && "Utilization Analysis"}
+              {activeSheet === 'salary' && "Salary Expenditure Analysis"}
+            </SheetTitle>
+            <SheetDescription>
+              {activeSheet === 'workforce' && "Full list of employees and their roles."}
+              {activeSheet === 'performance' && "Department-wise productivity comparison."}
+              {activeSheet === 'utilization' && "Workload distribution across organization."}
+              {activeSheet === 'salary' && "Financial allocation by department."}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-8 space-y-6">
+            {activeSheet === 'workforce' && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Dept</TableHead>
+                    <TableHead>Position</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {centralEmployees.map(e => (
+                    <TableRow key={e.employeeId}>
+                      <TableCell className="font-medium">{e.name}</TableCell>
+                      <TableCell>{e.department}</TableCell>
+                      <TableCell>{e.position}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+
+            {activeSheet === 'performance' && (
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={departmentOverview}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #E5E7EB' }}
+                      cursor={{ fill: '#F3F4F6' }}
+                    />
+                    <Bar dataKey="performance" name="Performance %" radius={[4, 4, 0, 0]}>
+                      {departmentOverview.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.performance > 85 ? '#10B981' : entry.performance > 70 ? '#2563EB' : '#EF4444'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {activeSheet === 'utilization' && (
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center text-red-600">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Overloaded Employees (&gt;90%)
+                  </h4>
+                  <div className="space-y-2">
+                    {centralEmployees.filter(e => e.scores.utilization > 90).map(e => (
+                      <div key={e.employeeId} className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                        <span className="text-sm font-medium">{e.name}</span>
+                        <Badge variant="destructive">{e.scores.utilization}%</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center text-blue-600">
+                    <Zap className="h-4 w-4 mr-2" />
+                    Underutilized Potential (&lt;60%)
+                  </h4>
+                  <div className="space-y-2">
+                    {centralEmployees.filter(e => e.scores.utilization < 60).map(e => (
+                      <div key={e.employeeId} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span className="text-sm font-medium">{e.name}</span>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">{e.scores.utilization}%</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSheet === 'salary' && (
+              <div className="space-y-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Department</TableHead>
+                      <TableHead className="text-right">Asset Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {departmentOverview.map(d => (
+                      <TableRow key={d.name}>
+                        <TableCell className="font-medium">{d.name}</TableCell>
+                        <TableCell className="text-right font-semibold">${(d.salary / 1000).toFixed(0)}K</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="p-4 bg-orange-50 rounded-xl border border-orange-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <DollarSign className="h-6 w-6 text-orange-600" />
+                    <div>
+                      <p className="text-xs uppercase font-bold text-orange-800 tracking-wider">Total Portfolio</p>
+                      <p className="text-2xl font-black text-orange-900">
+                        ${(departmentOverview.reduce((sum, d) => sum + d.salary, 0) / 1000000).toFixed(2)}M
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={!!activeDialog} onOpenChange={() => setActiveDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {activeDialog === 'skill-gap' && "Skill Gap Detail"}
+              {activeDialog === 'productivity' && "Productivity Milestone"}
+              {activeDialog === 'attrition' && "High Attrition Risk"}
+              {activeDialog === 'promotion' && "Promotion Readiness"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {activeDialog === 'skill-gap' && (
+              <div className="space-y-3">
+                <p className="text-sm text-slate-600">The following employees require immediate skills intervention:</p>
+                {centralEmployees.filter(e => e.scores.fitment < 70).map(e => (
+                  <div key={e.employeeId} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 cursor-pointer" onClick={() => navigate("/fitment")}>
+                    <div>
+                      <p className="font-medium text-sm">{e.name}</p>
+                      <p className="text-xs text-slate-500">{e.department}</p>
+                    </div>
+                    <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">{e.scores.fitment}% Fit</Badge>
+                  </div>
+                ))}
+                <Button className="w-full mt-4" onClick={() => navigate("/gap-analysis")}>Open Gap Analysis Portal</Button>
+              </div>
+            )}
+
+            {activeDialog === 'productivity' && (
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <TrendingUpIcon className="h-8 w-8 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-slate-900">+5.1% Growth</h4>
+                  <p className="text-sm text-slate-500">Workforce-wide productivity increase detected</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-slate-500 uppercase font-bold">Top Contributor</p>
+                    <p className="text-sm font-semibold">Engineering</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-slate-500 uppercase font-bold">New Hires</p>
+                    <p className="text-sm font-semibold">82% On-track</p>
+                  </div>
+                </div>
+                <Button variant="outline" className="w-full" onClick={() => navigate("/analytics")}>Detailed Performance Report</Button>
+              </div>
+            )}
+
+            {activeDialog === 'attrition' && (
+              <div className="space-y-3">
+                <div className="p-4 bg-red-50 border border-red-100 rounded-lg mb-4">
+                  <div className="flex gap-3">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="text-sm font-bold text-red-900">Immediate Action Required</p>
+                      <p className="text-xs text-red-700">Burnout threshold exceeded for high-value talent.</p>
+                    </div>
+                  </div>
+                </div>
+                {centralEmployees.filter(e => e.scores.fatigue > 85).map(e => (
+                  <div key={e.employeeId} className="flex justify-between items-center p-3 border rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm">{e.name}</p>
+                      <Badge className="mt-1 bg-red-100 text-red-800 text-[10px]">{e.position}</Badge>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-red-600">{e.scores.fatigue}%</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">Fatigue</p>
+                    </div>
+                  </div>
+                ))}
+                <Button className="w-full bg-red-600 hover:bg-red-700 mt-4" onClick={() => navigate("/fatigue")}>View Stress Analysis</Button>
+              </div>
+            )}
+
+            {activeDialog === 'promotion' && (
+              <div className="space-y-3">
+                <p className="text-sm text-slate-600">High-potential employees ready for internal mobility:</p>
+                {centralEmployees.filter(e => e.scores.fitment > 90 && e.scores.productivity > 85).map(e => (
+                  <div key={e.employeeId} className="flex gap-4 items-center p-3 border rounded-lg bg-green-50/30">
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">
+                      {e.name[0]}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-sm">{e.name}</p>
+                      <p className="text-xs text-slate-500">Targeting: {e.recommendedRole}</p>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">READY</Badge>
+                  </div>
+                ))}
+                <Button className="w-full bg-green-600 hover:bg-green-700 mt-4" onClick={() => navigate("/fitment")}>Manage Promotions</Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
