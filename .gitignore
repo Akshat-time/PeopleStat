@@ -1,0 +1,19 @@
+node_modules
+.env
+dist
+build
+.DS_Store
+*.log
+frontend ZIP.zip
+frontend.rar
+backend_old
+Frontend_run
+Frontend_new
+myapp_frontend
+frontend_unzipped
+git_status.txt
+test-write.txt
+test_activity.csv
+test_employee_data.csv
+test_jd.txt
+test_cv.txt
