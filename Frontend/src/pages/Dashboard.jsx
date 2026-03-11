@@ -24,9 +24,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { employees } from "@/data/mockEmployeeData";
 import { getWorkforceKPIs, getDepartmentDistributions, getAISignals } from "@/lib/workforce-utils";
 import { SkeletonKPICard } from "@/components/SkeletonCard";
+import { api } from "@/servicess/api";
+import { useToast } from "@/hooks/use-toast";
 
 // Brand palette chart colors
 const CHART_COLORS = ["#6A89A7", "#88BDF2", "#053259", "#BDDDFC", "#C8DCF0"];
@@ -36,17 +37,35 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
   const [selectedMetric, setSelectedMetric] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [employees, setEmployees] = useState([]);
+  const { toast } = useToast();
 
   const go = (path) => navigate(path);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+    const loadData = async () => {
+      try {
+        const response = await api.get("/employees");
+        if (response.data.success) {
+          setEmployees(response.data.data);
+        }
+      } catch (error) {
+        console.error("Dashboard fetch error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load live workforce data.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [toast]);
 
-  const kpis = useMemo(() => getWorkforceKPIs(), []);
-  const deptDist = useMemo(() => getDepartmentDistributions(), []);
-  const aiSignals = useMemo(() => getAISignals(), []);
+  const kpis = useMemo(() => getWorkforceKPIs(employees), [employees]);
+  const deptDist = useMemo(() => getDepartmentDistributions(employees), [employees]);
+  const aiSignals = useMemo(() => getAISignals(employees), [employees]);
 
   const derivedData = useMemo(() => {
     return {
@@ -57,34 +76,34 @@ export default function Dashboard() {
       },
       fitment: {
         value: kpis.avgFitment + "%",
-        topImpacted: [...employees].sort((a, b) => a.scores.fitment - b.scores.fitment).slice(0, 3).map(emp => emp.name),
+        topImpacted: [...employees].sort((a, b) => (a.scores?.fitment || a.fitmentScore || 0) - (b.scores?.fitment || b.fitmentScore || 0)).slice(0, 3).map(emp => emp.name),
         action: "Implement targeted training programs"
       },
       burnout: {
         value: kpis.burnoutRisk + "%",
-        topImpacted: employees.filter(emp => emp.scores.fatigue >= 75).slice(0, 3).map(emp => emp.name),
+        topImpacted: employees.filter(emp => (emp.scores?.fatigue || emp.fatigue || 0) >= 75).slice(0, 3).map(emp => emp.name),
         action: "Schedule wellness interventions"
       },
       automation: {
         value: "$" + kpis.automationSavings,
-        topImpacted: [...employees].sort((a, b) => b.scores.automationPotential - a.scores.automationPotential).slice(0, 3).map(emp => emp.name),
+        topImpacted: [...employees].sort((a, b) => (b.scores?.automationPotential || 0) - (a.scores?.automationPotential || 0)).slice(0, 3).map(emp => emp.name),
         action: "Prioritize RPA implementation"
       }
     };
-  }, [kpis]);
+  }, [kpis, employees]);
 
   // Derived chart data
   const fitmentPie = useMemo(() => [
-    { name: "Fit/Overfit", value: employees.filter(e => e.scores.fitment >= 70).length },
-    { name: "Train-to-Fit", value: employees.filter(e => e.scores.fitment >= 50 && e.scores.fitment < 70).length },
-    { name: "Unfit", value: employees.filter(e => e.scores.fitment < 50).length },
-  ], []);
+    { name: "Fit/Overfit", value: employees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) >= 70).length },
+    { name: "Train-to-Fit", value: employees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) >= 50 && (e.scores?.fitment || e.fitmentScore || 0) < 70).length },
+    { name: "Unfit", value: employees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) < 50).length },
+  ], [employees]);
 
   const fatiguePie = useMemo(() => [
-    { name: "Low", value: employees.filter(e => e.scores.fatigue < 50).length },
-    { name: "Medium", value: employees.filter(e => e.scores.fatigue >= 50 && e.scores.fatigue < 75).length },
-    { name: "High", value: employees.filter(e => e.scores.fatigue >= 75).length },
-  ], []);
+    { name: "Low", value: employees.filter(e => (e.scores?.fatigue || e.fatigue || 0) < 50).length },
+    { name: "Medium", value: employees.filter(e => (e.scores?.fatigue || e.fatigue || 0) >= 50 && (e.scores?.fatigue || e.fatigue || 0) < 75).length },
+    { name: "High", value: employees.filter(e => (e.scores?.fatigue || e.fatigue || 0) >= 75).length },
+  ], [employees]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>

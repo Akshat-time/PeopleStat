@@ -10,7 +10,6 @@ import { TooltipProvider } from "./components/ui/tooltip.jsx";
 import { Toaster } from "./components/ui/toaster.jsx";
 import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar.jsx";
 import { AppSidebar } from "./components/AppSidebar.jsx";
-import { ThemeToggle } from "./components/ThemeToggle.jsx";
 
 import { Bell, Brain } from "lucide-react";
 import { Button } from "./components/ui/button.jsx";
@@ -43,6 +42,7 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import NotFound from "./pages/not-found.jsx";
 import EmployeeDataForm from "./pages/employee/EmployeeDataForm.jsx";
+import AddEmployee from "./pages/AddEmployee.jsx";
 
 /* ---------------- PROTECTED ROUTES ---------------- */
 
@@ -162,6 +162,7 @@ function AppRouter() {
       <Route path="/documentation" component={() => <ProtectedRoute component={Documentation} />} />
       <Route path="/employee/data-form" component={() => <ProtectedRoute component={EmployeeDataForm} />} />
       <Route path="/upload-data" component={() => <ManagerRoute component={UploadData} />} />
+      <Route path="/add-employee" component={() => <ManagerRoute component={AddEmployee} />} />
 
       <Route component={NotFound} />
     </Switch>
@@ -240,8 +241,6 @@ function AppContent() {
               >
                 <Brain size={18} />
               </button>
-
-              <ThemeToggle />
 
               {/* Divider */}
               <div style={{ width: "1px", height: "24px", background: "#D4E5F7", margin: "0 6px" }} />

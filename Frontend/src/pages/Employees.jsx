@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { EmptyState } from "@/components/EmptyState";
 import {
@@ -32,8 +32,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 
 import EmployeeDrawer from "@/components/EmployeeDrawer";
-import { employees as centralEmployees, getOverallRisk, getFitmentBand } from "@/data/mockEmployeeData";
+import { getOverallRisk } from "@/data/mockEmployeeData";
 import { getWorkforceKPIs, getAISignals } from "@/lib/workforce-utils";
+import { api } from "@/servicess/api";
+import { Loader2 } from "lucide-react";
 
 // ---------------- PAGE ----------------
 export default function Employees() {
@@ -48,6 +50,29 @@ export default function Employees() {
   const [showAll, setShowAll] = useState(false);
   const { toast } = useToast();
   const [sortConfig, setSortConfig] = useState({ key: null, dir: "asc" });
+  const [employees, setEmployees] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const response = await api.get("/employees");
+        if (response.data.success) {
+          setEmployees(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch employees:", error);
+        toast({
+          title: "Error",
+          description: "Could not load employee data from server.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadEmployees();
+  }, []);
 
   const handleSort = (key) => {
     setSortConfig(prev =>
@@ -62,8 +87,8 @@ export default function Employees() {
     return <span style={{ color: "#2563EB", fontSize: "10px", marginLeft: "4px" }}>{sortConfig.dir === "asc" ? "↑" : "↓"}</span>;
   };
 
-  const kpis = useMemo(() => getWorkforceKPIs(), []);
-  const aiSignals = useMemo(() => getAISignals(), []);
+  const kpis = useMemo(() => getWorkforceKPIs(employees), [employees]);
+  const aiSignals = useMemo(() => getAISignals(employees), [employees]);
 
   // Parse URL query parameters
   useState(() => {
@@ -120,23 +145,23 @@ export default function Employees() {
     const params = new URLSearchParams(window.location.search);
     const isFatigueRisk = params.get("risk") === "fatigue";
 
-    return centralEmployees.filter((e) => {
-      const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
-        e.employeeId.toLowerCase().includes(search.toLowerCase());
+    return employees.filter((e) => {
+      const matchesSearch = (e.name || "").toLowerCase().includes(search.toLowerCase()) ||
+        (e.employeeId || "").toLowerCase().includes(search.toLowerCase());
       const matchesDept = !filters.department || e.department === filters.department;
 
       // Handle the generic risk filter vs the specific fatigue redirection
-      let matchesRisk = !filters.risk || getOverallRisk(e).toUpperCase() === filters.risk;
+      let matchesRisk = !filters.risk || (getOverallRisk(e) || "").toUpperCase() === filters.risk;
       if (isFatigueRisk && !filters.risk) {
-        matchesRisk = e.scores.fatigue >= 50;
+        matchesRisk = (e.scores?.fatigue || 0) >= 50;
       }
 
-      const matchesFitMin = !filters.fitmentMin || e.scores.fitment >= parseInt(filters.fitmentMin);
-      const matchesFitMax = !filters.fitmentMax || e.scores.fitment <= parseInt(filters.fitmentMax);
+      const matchesFitMin = !filters.fitmentMin || (e.scores?.fitment || e.fitmentScore || 0) >= parseInt(filters.fitmentMin);
+      const matchesFitMax = !filters.fitmentMax || (e.scores?.fitment || e.fitmentScore || 0) <= parseInt(filters.fitmentMax);
 
       return matchesSearch && matchesDept && matchesRisk && matchesFitMin && matchesFitMax;
     });
-  }, [search, filters]);
+  }, [search, filters, employees]);
 
   const sortedFiltered = useMemo(() => {
     if (!sortConfig.key) return filtered;
@@ -146,9 +171,9 @@ export default function Employees() {
         case "name":       aVal = a.name; bVal = b.name; break;
         case "position":   aVal = a.position; bVal = b.position; break;
         case "department": aVal = a.department; bVal = b.department; break;
-        case "fitment":    aVal = a.scores.fitment; bVal = b.scores.fitment; break;
-        case "productivity": aVal = a.scores.productivity; bVal = b.scores.productivity; break;
-        case "utilization": aVal = a.scores.utilization; bVal = b.scores.utilization; break;
+        case "fitment":    aVal = a.scores?.fitment || a.fitmentScore || 0; bVal = b.scores?.fitment || b.fitmentScore || 0; break;
+        case "productivity": aVal = a.scores?.productivity || a.productivity || 0; bVal = b.scores?.productivity || b.productivity || 0; break;
+        case "utilization": aVal = a.scores?.utilization || a.utilization || 0; bVal = b.scores?.utilization || b.utilization || 0; break;
         default: return 0;
       }
       if (aVal < bVal) return sortConfig.dir === "asc" ? -1 : 1;
@@ -175,8 +200,8 @@ export default function Employees() {
   const handleExport = () => {
     const csvContent = "data:text/csv;charset=utf-8," +
       "Name,Email,Position,Department,Fitment Score,Productivity,Utilization,Salary\n" +
-      centralEmployees.map(emp =>
-        `${emp.name},${emp.email},${emp.position},${emp.department},${emp.scores.fitment},${emp.scores.productivity},${emp.scores.utilization},${emp.salary}`
+      employees.map(emp =>
+        `${emp.name},${emp.email},${emp.position},${emp.department},${emp.scores?.fitment || emp.fitmentScore || 0},${emp.scores?.productivity || emp.productivity || 0},${emp.scores?.utilization || emp.utilization || 0},${emp.salary}`
       ).join("\n");
 
     const encodedUri = encodeURI(csvContent);
@@ -195,6 +220,11 @@ export default function Employees() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter']">
       <div className="max-w-7xl mx-auto space-y-6">
+        {isLoading && (
+          <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        )}
         {/* HEADER */}
         <div className="flex justify-between items-center">
           <div>
@@ -427,17 +457,17 @@ export default function Employees() {
                       <td className="p-3 text-[#0F172A]">{e.position}</td>
                       <td className="p-3 text-[#0F172A]">{e.department}</td>
                       <td className="p-3">
-                        <Badge className={`font-medium ${getFitmentColor(e.scores.fitment)}`}>
-                          {e.scores.fitment}%
+                        <Badge className={`font-medium ${getFitmentColor(e.scores?.fitment || e.fitmentScore || 0)}`}>
+                          {e.scores?.fitment || e.fitmentScore || 0}%
                         </Badge>
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <Progress value={e.scores.productivity} className="w-20" />
-                          <span className="text-xs">{e.scores.productivity}%</span>
+                          <Progress value={e.scores?.productivity || e.productivity || 0} className="w-20" />
+                          <span className="text-xs">{e.scores?.productivity || e.productivity || 0}%</span>
                         </div>
                       </td>
-                      <td className="p-3 font-medium text-[#0F172A]">{e.scores.utilization}%</td>
+                      <td className="p-3 font-medium text-[#0F172A]">{e.scores?.utilization || e.utilization || 0}%</td>
                       <td className="p-3">
                         {getRiskIcon(getOverallRisk(e))}
                       </td>
@@ -484,8 +514,8 @@ export default function Employees() {
             <Card className="p-4 bg-white border-[#E5E7EB] rounded-xl shadow-sm">
               <h3 className="font-semibold text-[#0F172A] mb-4">Top 3 At-Risk Employees</h3>
               <div className="space-y-3">
-                {[...centralEmployees]
-                  .sort((a, b) => b.scores.fatigue - a.scores.fatigue)
+                {[...employees]
+                  .sort((a, b) => (b.scores?.fatigue || 0) - (a.scores?.fatigue || 0))
                   .slice(0, 3)
                   .map(emp => (
                     <div
@@ -504,11 +534,11 @@ export default function Employees() {
             <Card className="p-4 bg-green-50 border border-green-200 rounded-xl shadow-sm">
               <h3 className="font-semibold text-[#0F172A] mb-3">Promotion-Ready</h3>
               <div className="space-y-2 mb-4">
-                {centralEmployees
-                  .filter(e => e.scores.fitment >= 85)
+                {employees
+                  .filter(e => (e.scores?.fitment || e.fitmentScore || 0) >= 85)
                   .slice(0, 2)
                   .map(emp => (
-                    <p key={emp.employeeId} className="text-sm text-[#0F172A]">{emp.name} → {emp.recommendedRole}</p>
+                    <p key={emp.employeeId} className="text-sm text-[#0F172A]">{emp.name} → {emp.recommendedRole || 'Next Level'}</p>
                   ))}
               </div>
               <Button variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-100" onClick={() => navigate("/fitment-analysis")}>
@@ -604,7 +634,7 @@ export default function Employees() {
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => {
-                  setSelectedEmployee(centralEmployees.find(emp => emp.name === selectedAtRiskEmployee?.name));
+                  setSelectedEmployee(employees.find(emp => emp.name === selectedAtRiskEmployee?.name));
                   setSelectedAtRiskEmployee(null);
                 }}>
                   View Full Profile

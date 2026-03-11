@@ -11,7 +11,10 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true
+}));
 
 // MongoDB Connection
 mongoose
@@ -29,11 +32,13 @@ import authRoutes from "./routes/authRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import optimizationRoutes from "./routes/optimizationRoutes.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/optimization", optimizationRoutes);
 
 // Server Running
 const PORT = process.env.PORT || 5001;

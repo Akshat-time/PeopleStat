@@ -9,21 +9,47 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { employees as initialEmployees, getFitmentBand } from "@/data/mockEmployeeData";
+import { getFitmentBand } from "@/data/mockEmployeeData";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/servicess/api";
+import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
 export default function FitmentAnalysis() {
   const { user } = useAuth();
   const isEmployee = user?.role === "employee";
+  const { toast } = useToast();
+  const [employees, setEmployees] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const response = await api.get("/employees");
+        if (response.data.success) {
+          setEmployees(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch employees:", error);
+        toast({
+          title: "Error",
+          description: "Could not load employee data.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadEmployees();
+  }, [toast]);
 
   const centralEmployees = useMemo(() => {
     if (isEmployee) {
-      return initialEmployees.filter(e => e.employeeId === user.employeeId);
+      return employees.filter(e => e.employeeId === user.employeeId);
     }
-    return initialEmployees;
-  }, [isEmployee, user]);
+    return employees;
+  }, [isEmployee, user, employees]);
 
-  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [processFilter, setProcessFilter] = useState("All Departments");
@@ -37,7 +63,7 @@ export default function FitmentAnalysis() {
   const distribution = useMemo(() => {
     const counts = { "Unfit": 0, "Train-to-Fit": 0, "Fit": 0, "Overfit": 0 };
     centralEmployees.forEach(e => {
-      counts[getFitmentBand(e.scores.fitment)]++;
+      counts[getFitmentBand(e.scores?.fitment || e.fitmentScore || 0)]++;
     });
     return [
       { name: "Unfit", value: counts["Unfit"], color: "#ef4444" },
@@ -50,8 +76,8 @@ export default function FitmentAnalysis() {
   const kpiData = useMemo(() => {
     const fitPlusOver = distribution.filter(d => d.name === "Fit" || d.name === "Overfit").reduce((a, b) => a + b.value, 0);
     const misalignedCount = distribution.filter(d => d.name === "Unfit" || d.name === "Train-to-Fit").reduce((a, b) => a + b.value, 0);
-    const percentFit = (fitPlusOver / centralEmployees.length * 100).toFixed(1);
-    const costAtRisk = centralEmployees.filter(e => e.scores.fitment < 70).reduce((sum, e) => sum + e.salary, 0);
+    const percentFit = centralEmployees.length > 0 ? (fitPlusOver / centralEmployees.length * 100).toFixed(1) : 0;
+    const costAtRisk = centralEmployees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) < 70).reduce((sum, e) => sum + (e.salary || 0), 0);
 
     return [
       { 
@@ -76,9 +102,9 @@ export default function FitmentAnalysis() {
   const scatterData = useMemo(() => {
     return centralEmployees.map(e => ({
       name: e.name,
-      fitment: e.scores.fitment,
-      productivity: e.scores.productivity,
-      category: getFitmentBand(e.scores.fitment)
+      fitment: e.scores?.fitment || e.fitmentScore || 0,
+      productivity: e.scores?.productivity || e.productivity || 0,
+      category: getFitmentBand(e.scores?.fitment || e.fitmentScore || 0)
     }));
   }, []);
 
@@ -86,8 +112,8 @@ export default function FitmentAnalysis() {
     const depts = [...new Set(centralEmployees.map(e => e.department))];
     return depts.map(dept => {
       const emps = centralEmployees.filter(e => e.department === dept);
-      const unfit = emps.filter(e => e.scores.fitment < 70).length;
-      const riskPercent = Math.round((unfit / emps.length) * 100);
+      const unfit = emps.filter(e => (e.scores?.fitment || e.fitmentScore || 0) < 70).length;
+      const riskPercent = emps.length > 0 ? Math.round((unfit / emps.length) * 100) : 0;
       return {
         process: dept,
         unfit: riskPercent,
@@ -100,11 +126,11 @@ export default function FitmentAnalysis() {
 
   const filteredEmployees = useMemo(() => {
     return centralEmployees.filter(emp => {
-      const matchesSearch = emp.name.toLowerCase().includes(search.toLowerCase()) || emp.employeeId.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = (emp.name || "").toLowerCase().includes(search.toLowerCase()) || (emp.employeeId || "").toLowerCase().includes(search.toLowerCase());
       const matchesDept = processFilter === "All Departments" || emp.department === processFilter;
-      const matchesFit = fitmentFilter === "All Fitment Status" || getFitmentBand(emp.scores.fitment) === fitmentFilter;
+      const matchesFit = fitmentFilter === "All Fitment Status" || getFitmentBand(emp.scores?.fitment || emp.fitmentScore || 0) === fitmentFilter;
       return matchesSearch && matchesDept && matchesFit;
-    }).sort((a, b) => b.scores.fitment - a.scores.fitment);
+    }).sort((a, b) => (b.scores?.fitment || b.fitmentScore || 0) - (a.scores?.fitment || a.fitmentScore || 0));
   }, [search, processFilter, fitmentFilter]);
 
   const getFitmentColor = (fitmentBand) => {
@@ -131,6 +157,11 @@ export default function FitmentAnalysis() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter']">
       <div className="max-w-7xl mx-auto space-y-6">
+        {isLoading && (
+          <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        )}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Workforce Fitment Intelligence</h1>
           <p className="text-slate-500 mt-1">Enterprise-grade workforce optimization insights driven by AI Analysis</p>
@@ -222,14 +253,14 @@ export default function FitmentAnalysis() {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-gray-600">{emp.position}</td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <Badge className={getFitmentColor(getFitmentBand(emp.scores.fitment))}>
-                          {getFitmentBand(emp.scores.fitment)}
+                        <Badge className={getFitmentColor(getFitmentBand(emp.scores?.fitment || emp.fitmentScore || 0))}>
+                          {getFitmentBand(emp.scores?.fitment || emp.fitmentScore || 0)}
                         </Badge>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <Progress value={emp.scores.productivity} className="w-16" />
-                          <span>{emp.scores.productivity}%</span>
+                          <Progress value={emp.scores?.productivity || emp.productivity || 0} className="w-16" />
+                          <span>{emp.scores?.productivity || emp.productivity || 0}%</span>
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-gray-700 font-medium">${emp.salary.toLocaleString()}</td>
@@ -261,17 +292,17 @@ export default function FitmentAnalysis() {
                     </div>
                     <div className="p-2 bg-gray-50 rounded">
                       <span className="block text-gray-500 text-xs uppercase">Fitment Band</span>
-                      <Badge className={getFitmentColor(getFitmentBand(selectedEmployee.scores.fitment))}>
-                        {getFitmentBand(selectedEmployee.scores.fitment)}
+                      <Badge className={getFitmentColor(getFitmentBand(selectedEmployee.scores?.fitment || selectedEmployee.fitmentScore || 0))}>
+                        {getFitmentBand(selectedEmployee.scores?.fitment || selectedEmployee.fitmentScore || 0)}
                       </Badge>
                     </div>
                     <div className="p-2 bg-gray-50 rounded">
                       <span className="block text-gray-500 text-xs uppercase">Productivity</span>
-                      <span className="font-semibold text-blue-600">{selectedEmployee.scores.productivity}%</span>
+                      <span className="font-semibold text-blue-600">{selectedEmployee.scores?.productivity || selectedEmployee.productivity || 0}%</span>
                     </div>
                     <div className="p-2 bg-gray-50 rounded">
                       <span className="block text-gray-500 text-xs uppercase">Utilization</span>
-                      <span className="font-semibold text-teal-600">{selectedEmployee.scores.utilization}%</span>
+                      <span className="font-semibold text-teal-600">{selectedEmployee.scores?.utilization || selectedEmployee.utilization || 0}%</span>
                     </div>
                   </div>
                 </div>

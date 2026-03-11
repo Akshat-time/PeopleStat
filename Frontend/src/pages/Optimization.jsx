@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import {
   DollarSign,
   Zap,
@@ -8,64 +9,38 @@ import {
   AlertCircle,
   ArrowUpRight,
   ShieldCheck,
+  Loader2
 } from "lucide-react";
-import { employees as centralEmployees } from "@/data/mockEmployeeData";
+import { api } from "@/servicess/api";
 
 /* =================== COMPONENT =================== */
 export default function Optimization() {
-  const recommendations = useMemo(() => {
-    const fatigueRiskEmps = centralEmployees.filter(e => e.scores.fatigue > 80);
-    const skillGapEmps = centralEmployees.filter(e => e.scores.fitment < 65);
-    const overfitEmps = centralEmployees.filter(e => e.scores.fitment > 90 && e.scores.utilization < 75);
+  const { toast } = useToast();
+  const [recommendations, setRecommendations] = useState([]);
+  const [totalEmps, setTotalEmps] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-    return [
-      {
-        title: "Reallocate High-Fitment Talent",
-        description: `${overfitEmps.length} employees are high-fit but under-utilized, indicating potential role misalignment or capacity for higher responsibility.`,
-        impact: {
-          employees: overfitEmps.length,
-          savings: `$${(overfitEmps.length * 45000 / 1000).toFixed(0)}K`,
-          riskReduction: "15%",
-        },
-        basis: "Fitment vs Utilization Matrix",
-        actions: [
-          "Evaluate for project leadership roles",
-          "Open internal mobility tracks",
-          "Review workload distribution",
-        ],
-      },
-      {
-        title: "Targeted Reskilling Program",
-        description: `Skill gaps detected for ${skillGapEmps.length} employees across core competencies.`,
-        impact: {
-          employees: skillGapEmps.length,
-          savings: `$${(skillGapEmps.length * 80000 / 1000000).toFixed(2)}M`,
-          riskReduction: "32%",
-        },
-        basis: "Gap Analysis Intelligence",
-        actions: [
-          "Deploy automated learning paths",
-          "Allocate skill development credits",
-          "Schedule mentorship workshops",
-        ],
-      },
-      {
-        title: "Fatigue Risk Mitigation",
-        description: `Critical burnout risk detected for ${fatigueRiskEmps.length} high-performing employees.`,
-        impact: {
-          employees: fatigueRiskEmps.length,
-          savings: `$${(fatigueRiskEmps.length * 95000 / 1000).toFixed(0)}K`,
-          riskReduction: "45%",
-        },
-        basis: "Fatigue & Stress Exposure Analysis",
-        actions: [
-          "Mandatory recovery cycle assignment",
-          "Redistribute high-complexity tasks",
-          "Conduct 1:1 wellbeing pulse checks",
-        ],
-      },
-    ];
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        const response = await api.get('/optimization/recommendations');
+        setRecommendations(response.data.recommendations);
+        setTotalEmps(response.data.totalEmployeesAnalysis);
+      } catch (err) {
+        console.error("Failed to fetch optimizations:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRecommendations();
   }, []);
+
+  const handleInitiate = () => {
+    toast({
+      title: "Optimization Initiated",
+      description: "The selected workforce pipeline has been queued for execution.",
+    });
+  };
 
   const totalSavings = useMemo(() => {
     return recommendations.reduce((sum, rec) => {
@@ -88,11 +63,17 @@ export default function Optimization() {
           Optimization Recommendations
         </h1>
         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-          AI-driven workforce actions to reduce cost, risk, and inefficiencies based on current {centralEmployees.length} employee records
+          AI-driven workforce actions to reduce cost, risk, and inefficiencies based on current {totalEmps} employee records
         </p>
       </div>
 
-      {/* EXECUTIVE SUMMARY */}
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        </div>
+      ) : (
+        <>
+          {/* EXECUTIVE SUMMARY */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <SummaryCard
           title="Avg Risk Reduction"
@@ -173,7 +154,10 @@ export default function Optimization() {
                 </div>
               </CardContent>
 
-              <button className="w-full border-t py-3 text-xs font-semibold uppercase tracking-wide text-blue-600 hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors">
+              <button 
+                onClick={handleInitiate}
+                className="w-full border-t py-3 text-xs font-semibold uppercase tracking-wide text-blue-600 hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors"
+               >
                 Initiate Optimization
                 <ArrowUpRight size={14} />
               </button>
@@ -181,6 +165,8 @@ export default function Optimization() {
           ))}
         </div>
       </div>
+     </>
+    )}
     </div>
   );
 }
