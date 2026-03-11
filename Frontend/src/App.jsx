@@ -161,6 +161,7 @@ function AppRouter() {
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/documentation" component={() => <ProtectedRoute component={Documentation} />} />
       <Route path="/employee/data-form" component={() => <ProtectedRoute component={EmployeeDataForm} />} />
+      <Route path="/upload-data" component={() => <ManagerRoute component={UploadData} />} />
 
       <Route component={NotFound} />
     </Switch>

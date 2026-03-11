@@ -160,22 +160,22 @@ export default function Settings() {
             {/* Left Sidebar */}
             <div className="col-span-4 space-y-6">
               {/* Global Hierarchy Health */}
-              <Card className="bg-slate-900 text-white">
+              <Card className="bg-white border-slate-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Global Hierarchy Health</CardTitle>
+                  <CardTitle className="text-lg text-slate-900">Global Hierarchy Health</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Operational Units</span>
-                    <span className="font-bold text-xl">{Object.keys(departments).length}</span>
+                    <span className="text-sm text-slate-600 font-medium">Operational Units</span>
+                    <span className="font-bold text-xl text-slate-900">{Object.keys(departments).length}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Active Teams</span>
-                    <span className="font-bold text-xl">{Object.values(teams).flat().length}</span>
+                    <span className="text-sm text-slate-600 font-medium">Active Teams</span>
+                    <span className="font-bold text-xl text-slate-900">{Object.values(teams).flat().length}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Mapping Integrity</span>
-                    <span className="font-bold text-xl text-green-400">98%</span>
+                    <span className="text-sm text-slate-600 font-medium">Mapping Integrity</span>
+                    <span className="font-bold text-xl text-green-600">98%</span>
                   </div>
                 </CardContent>
               </Card>

@@ -233,32 +233,32 @@ export default function Fatigue() {
         {/* TOP BANNER */}
         {!isEmployee && (
           <Card
-            className="p-8 bg-gradient-to-r from-slate-900 to-slate-800 border-none rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-all group overflow-hidden relative"
+            className="p-8 bg-white border border-slate-200 rounded-2xl shadow-sm cursor-pointer hover:shadow-md transition-all group overflow-hidden relative"
             onClick={() => setActiveModal('summary')}
           >
             <div className="relative z-10 flex items-center justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 bg-red-500 rounded-lg animate-pulse">
-                    <Brain className="h-5 w-5 text-white" />
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <Brain className="h-5 w-5 text-red-600" />
                   </div>
-                  <span className="text-red-400 font-bold tracking-wider text-xs uppercase">AI Critical Focus</span>
+                  <span className="text-red-600 font-black tracking-wider text-xs uppercase">AI Critical Focus</span>
                 </div>
-                <h2 className="text-3xl font-bold">Fatigue Risk Alert</h2>
-                <p className="text-slate-300 max-w-xl text-lg">
-                  <span className="text-white font-bold">{wellbeingSignals[0].count} employees</span> are showing high attrition risk patterns. Primary driver identified as <span className="text-slate-100 italic underline decoration-red-500">Chronic Over-utilization</span>.
+                <h2 className="text-3xl font-black text-slate-900">Fatigue Risk Alert</h2>
+                <p className="text-slate-600 max-w-xl text-lg font-medium">
+                  <span className="text-slate-900 font-black">{wellbeingSignals[0].count} employees</span> are showing high attrition risk patterns. Primary driver identified as <span className="text-slate-900 font-bold italic underline decoration-red-500 underline-offset-4">Chronic Over-utilization</span>.
                 </p>
               </div>
-              <div className="hidden lg:flex items-center gap-4 bg-white/10 p-4 rounded-xl backdrop-blur-sm group-hover:bg-white/20 transition-all border border-white/10">
+              <div className="hidden lg:flex items-center gap-4 bg-slate-50 p-4 rounded-xl group-hover:bg-slate-100 transition-all border border-slate-100">
                 <div className="text-right">
-                  <p className="text-slate-300 text-sm">Action Required</p>
-                  <p className="font-bold">View Intervention Plan</p>
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest leading-none mb-1">Action Required</p>
+                  <p className="font-black text-slate-900">View Intervention Plan</p>
                 </div>
-                <ChevronRight className="h-6 w-6 text-white group-hover:translate-x-1 transition-transform" />
+                <ChevronRight className="h-6 w-6 text-slate-400 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
             {/* Decorative element */}
-            <div className="absolute right-[-5%] top-[-50%] w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute right-[-5%] top-[-50%] w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
           </Card>
         )}
 
@@ -527,9 +527,9 @@ export default function Fatigue() {
                       </div>
                     </div>
                     <div className="w-full sm:w-auto flex flex-col gap-3">
-                      <div className="p-4 bg-slate-900 rounded-xl text-center text-white">
+                      <div className="p-4 bg-slate-50 rounded-xl text-center border border-slate-100">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Cost Factor</p>
-                        <p className="text-2xl font-black italic">{action.cost}</p>
+                        <p className="text-2xl font-black italic text-slate-900">{action.cost}</p>
                       </div>
                       <Button
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs h-12 shadow-lg shadow-blue-200"
