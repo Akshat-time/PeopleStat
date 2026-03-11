@@ -84,7 +84,11 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+<<<<<<< HEAD
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+=======
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+>>>>>>> 929ab04d149ac4a2d54b835b44930101ebb695fb
       expiresIn: '7d'
     });
 
@@ -94,8 +98,12 @@ export const login = async (req, res) => {
         id: user._id,
         username: user.username,
         name: user.name,
+<<<<<<< HEAD
         email: user.email,
         role: user.role
+=======
+        email: user.email
+>>>>>>> 929ab04d149ac4a2d54b835b44930101ebb695fb
       }
     });
 

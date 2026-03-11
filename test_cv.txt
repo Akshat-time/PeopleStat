@@ -1,0 +1,1 @@
+John Doe, john@example.com, JavaScript, React, Node.js, 5 years experience, Bachelor's in CS
