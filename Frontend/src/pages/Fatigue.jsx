@@ -61,6 +61,9 @@ export default function Fatigue() {
   }, [isEmployee, user]);
 
   const fatigueMetrics = useMemo(() => {
+    if (centralEmployees.length === 0) {
+      return { overallScore: null, riskLevel: "MEDIUM", trend: 0 };
+    }
     const avgFatigue = centralEmployees.reduce((sum, e) => sum + e.scores.fatigue, 0) / centralEmployees.length;
     return {
       overallScore: Math.round(avgFatigue),
@@ -73,7 +76,9 @@ export default function Fatigue() {
     {
       id: "utilization",
       title: "Workload Intensity",
-      value: Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.utilization, 0) / centralEmployees.length),
+      value: centralEmployees.length > 0
+        ? Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.utilization, 0) / centralEmployees.length)
+        : null,
       change: 12,
       changeType: "up",
       icon: Target,
@@ -83,7 +88,7 @@ export default function Fatigue() {
     {
       id: "overtime",
       title: "Overtime Frequency",
-      value: 64, // Semi-mock
+      value: 64,
       change: 8,
       changeType: "up",
       icon: Clock,
@@ -93,7 +98,9 @@ export default function Fatigue() {
     {
       id: "productivity",
       title: "Focus Consistency",
-      value: Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.productivity, 0) / centralEmployees.length),
+      value: centralEmployees.length > 0
+        ? Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.productivity, 0) / centralEmployees.length)
+        : null,
       change: 15,
       changeType: "down",
       icon: Activity,
@@ -103,7 +110,9 @@ export default function Fatigue() {
     {
       id: "fatigue",
       title: "Stress Signals",
-      value: Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.fatigue, 0) / centralEmployees.length),
+      value: centralEmployees.length > 0
+        ? Math.round(centralEmployees.reduce((sum, e) => sum + e.scores.fatigue, 0) / centralEmployees.length)
+        : null,
       change: 9,
       changeType: "up",
       icon: Heart,
@@ -281,8 +290,19 @@ export default function Fatigue() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-5xl font-black text-slate-900 tracking-tighter">{fatigueMetrics.overallScore}</span>
-                  <span className="text-slate-400 text-sm font-bold uppercase tracking-widest">Global Score</span>
+                  {fatigueMetrics.overallScore === null ? (
+                    <>
+                      <span className="text-4xl font-black text-slate-400" title="Data will be available after first assessment">
+                        –
+                      </span>
+                      <span className="text-slate-400 text-sm font-bold uppercase tracking-widest">No Data</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-5xl font-black text-slate-900 tracking-tighter">{fatigueMetrics.overallScore}</span>
+                      <span className="text-slate-400 text-sm font-bold uppercase tracking-widest">Global Score</span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="text-center w-full">
@@ -320,7 +340,11 @@ export default function Fatigue() {
                 <div className="mt-8 relative z-10">
                   <p className="text-slate-500 font-bold text-xs uppercase tracking-widest leading-none mb-1">{indicator.title}</p>
                   <div className="flex items-end gap-2">
-                    <p className="text-4xl font-black text-slate-900 tracking-tight leading-none">{indicator.value}%</p>
+                    <p className="text-4xl font-black text-slate-900 tracking-tight leading-none">
+                      {indicator.value === null ? (
+                        <span style={{ color: "#9CA3AF", fontSize: "28px" }} title="Data will be available after first assessment">–</span>
+                      ) : `${indicator.value}%`}
+                    </p>
                     <ArrowRight className="h-5 w-5 text-slate-200 group-hover:text-blue-500 group-hover:translate-x-1 transition-all mb-1" />
                   </div>
                 </div>

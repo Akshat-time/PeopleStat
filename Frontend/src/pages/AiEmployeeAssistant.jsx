@@ -47,42 +47,42 @@ export default function AiEmployeeAssistant() {
               <CardContent className="space-y-3">
                 <Button
                   variant="outline"
-                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50"
+                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
                   onClick={() => {/* Will be handled by AIChat */}}
                 >
                   <span className="text-sm">Who is at burnout risk?</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50"
+                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
                   onClick={() => {/* Will be handled by AIChat */}}
                 >
                   <span className="text-sm">Who should be reskilled?</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50"
+                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
                   onClick={() => {/* Will be handled by AIChat */}}
                 >
                   <span className="text-sm">Who is underutilized?</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50"
+                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
                   onClick={() => {/* Will be handled by AIChat */}}
                 >
                   <span className="text-sm">Show me high-risk employees</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50"
+                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
                   onClick={() => {/* Will be handled by AIChat */}}
                 >
                   <span className="text-sm">Who are our top performers?</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50"
+                  className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
                   onClick={() => {/* Will be handled by AIChat */}}
                 >
                   <span className="text-sm">Tell me about Sarah Johnson</span>
