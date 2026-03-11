@@ -230,11 +230,7 @@ export default function Login() {
               </div>
             </div>
 
-<<<<<<< HEAD
             <div className="flex justify-end">
-=======
-            <div className="flex justify-end">
->>>>>>> 929ab04d149ac4a2d54b835b44930101ebb695fb
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(true)}
@@ -299,7 +295,4 @@ export default function Login() {
     </div>
   );
 }
-<<<<<<< HEAD
 
-=======
->>>>>>> 929ab04d149ac4a2d54b835b44930101ebb695fb
