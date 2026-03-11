@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 // =====================
 export const register = async (req, res) => {
   try {
-    const { name, username, email, password } = req.body;
+    const { name, username, email, password, role } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({ message: 'Missing fields' });
@@ -31,12 +31,13 @@ export const register = async (req, res) => {
       name,
       username,
       email: email.toLowerCase(),
-      password: hashed
+      password: hashed,
+      role: role || 'employee'
     });
 
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: '7d'
     });
 
@@ -46,7 +47,8 @@ export const register = async (req, res) => {
         id: user._id,
         username: user.username,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     });
 
@@ -82,7 +84,11 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+<<<<<<< HEAD
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+=======
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+>>>>>>> 929ab04d149ac4a2d54b835b44930101ebb695fb
       expiresIn: '7d'
     });
 
@@ -92,7 +98,12 @@ export const login = async (req, res) => {
         id: user._id,
         username: user.username,
         name: user.name,
+<<<<<<< HEAD
+        email: user.email,
+        role: user.role
+=======
         email: user.email
+>>>>>>> 929ab04d149ac4a2d54b835b44930101ebb695fb
       }
     });
 
