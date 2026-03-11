@@ -1,54 +1,42 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const connectDB = require('./config/db');
+import express from "express";
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+import cors from "cors";
 
+// Load environment variables
+dotenv.config();
+
+// Create express app
 const app = express();
 
-// Deployment Environment Validation
-if (!process.env.JWT_SECRET) {
-  console.error('FATAL ERROR: JWT_SECRET environment variable is missing.');
-  process.exit(1);
-}
-if (!process.env.FRONTEND_URL && process.env.NODE_ENV === 'production') {
-  console.warn('WARNING: FRONTEND_URL is not set. CORS may block frontend requests in production.');
-}
-
-// Set security HTTP headers
-app.use(helmet());
-
-// Connect Database
-connectDB();
-
-// Init Middleware
+// Middleware
 app.use(express.json());
+app.use(cors());
 
-// Configure CORS for production (allow frontend origin)
-app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost:5173', process.env.FRONTEND_URL || '*'], credentials: true }));
+// MongoDB Connection
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected Successfully!"))
+  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+// Basic Route
+app.get("/", (req, res) => {
+  res.send("Server is running...");
 });
-app.use('/api', limiter);
 
-app.get('/', (req, res) => res.send('API Running securely'));
+// Add your routes
+import authRoutes from "./routes/authRoutes.js";
+import employeeRoutes from "./routes/employeeRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
 
-// Define Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/user', require('./routes/user'));
-app.use('/api/employees', require('./routes/employees'));
-app.use('/api/assessments', require('./routes/assessments'));
-app.use('/api/analytics', require('./routes/analytics'));
-app.use('/api/ai', require('./routes/ai'));
+app.use("/api/auth", authRoutes);
+app.use("/api/employees", employeeRoutes);
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/settings", settingsRoutes);
 
-const PORT = process.env.PORT || 5000;
-
-if (require.main === module) {
-  app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
-}
-
-module.exports = app;
+// Server Running
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});

@@ -1,7 +1,7 @@
 // App.jsx
-import React, { useEffect, useState } from "react";
 import GapAnalysis from "./pages/GapAnalysis.jsx";
 
+import { useEffect, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -12,34 +12,15 @@ import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar.jsx";
 import { AppSidebar } from "./components/AppSidebar.jsx";
 import { ThemeToggle } from "./components/ThemeToggle.jsx";
 
-import { Bell, Bot } from "lucide-react";
+import { Bell, Brain } from "lucide-react";
 import { Button } from "./components/ui/button.jsx";
 import { Avatar, AvatarFallback } from "./components/ui/avatar.jsx";
 
 import { AuthProvider, useAuth } from "./lib/auth.jsx";
-import { WorkforceProvider } from "./contexts/WorkforceContext.jsx";
 import { AIProvider } from "./contexts/AIContext.jsx";
 import AIChat from "./components/AIChat.jsx";
-
-// Error boundary to prevent AIProvider crash from blanking the whole app
-class AIErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError() { return { hasError: true }; }
-  componentDidCatch(err) { console.error("AIProvider crashed:", err); }
-  render() {
-    if (this.state.hasError) {
-      return this.props.children; // render children without AI features
-    }
-    return (
-      <AIProvider>
-        {this.props.children}
-      </AIProvider>
-    );
-  }
-}
+import { ProfileDropdown } from "./components/ProfileDropdown.jsx";
+import { NotificationPanel } from "./components/NotificationPanel.jsx";
 
 /* ---------------- PAGES ---------------- */
 import Dashboard from "./pages/Dashboard.jsx";
@@ -62,7 +43,6 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import NotFound from "./pages/not-found.jsx";
 import EmployeeDataForm from "./pages/employee/EmployeeDataForm.jsx";
-import EmployeeProfile from "./pages/employee/EmployeeProfile.jsx";
 
 /* ---------------- PROTECTED ROUTES ---------------- */
 
@@ -73,19 +53,32 @@ function ProtectedRoute({ component: Component }) {
   console.log("ProtectedRoute - user:", user, "isLoading:", isLoading);
 
   useEffect(() => {
+    console.log("ProtectedRoute useEffect - isLoading:", isLoading, "user:", user);
     if (!isLoading && !user) {
+      console.log("Redirecting to login");
       navigate("/login");
     }
   }, [isLoading, user]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    console.log("Showing loading screen");
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#F7F8FA" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: "3px solid #E6E6E6", borderTopColor: "#6D8196", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }}></div>
+          <p style={{ color: "#7A7A7A", fontSize: "14px" }}>Loading...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
   }
 
   if (!user) {
+    console.log("No user, returning null");
     return null;
   }
 
+  console.log("Rendering component");
   return <Component />;
 }
 
@@ -98,18 +91,29 @@ function ManagerRoute({ component: Component }) {
   }, [isLoading, user]);
 
   if (isLoading)
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#F7F8FA" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: "3px solid #E6E6E6", borderTopColor: "#6D8196", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }}></div>
+          <p style={{ color: "#7A7A7A", fontSize: "14px" }}>Loading...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
 
   if (!user) return null;
 
   if (user.role !== "manager") {
     return (
-      <div className="flex items-center justify-center h-screen text-center">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", textAlign: "center", background: "#F7F8FA" }}>
         <div>
-          <h1 className="text-2xl font-semibold">Access Denied</h1>
-          <p className="text-muted-foreground">
-            Manager access required
-          </p>
+          <div style={{ width: "64px", height: "64px", background: "rgba(109,129,150,0.1)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#6D8196" strokeWidth="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <h1 style={{ fontSize: "22px", fontWeight: 600, color: "#4A4A4A", marginBottom: "8px" }}>Access Restricted</h1>
+          <p style={{ color: "#7A7A7A", fontSize: "14px" }}>Manager access is required to view this page.</p>
         </div>
       </div>
     );
@@ -136,10 +140,8 @@ function AppRouter() {
       <Route path="/fitment" component={() => <ProtectedRoute component={FitmentAnalysis} />} />
       <Route path="/softskills" component={() => <ProtectedRoute component={Softskills} />} />
       <Route path="/fatigue" component={() => <ProtectedRoute component={Fatigue} />} />
-      <Route path="/employee/skills" component={() => <ProtectedRoute component={Softskills} />} />
       <Route path="/workforce-intelligence" component={() => <ManagerRoute component={WorkforceIntelligence} />} />
 
-      {/* ✅ THIS ONE */}
       <Route
         path="/gap-analysis"
         component={() => <ManagerRoute component={GapAnalysis} />}
@@ -159,8 +161,7 @@ function AppRouter() {
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/documentation" component={() => <ProtectedRoute component={Documentation} />} />
       <Route path="/employee/data-form" component={() => <ProtectedRoute component={EmployeeDataForm} />} />
-      <Route path="/employee/profile" component={() => <ProtectedRoute component={EmployeeProfile} />} />
-
+      <Route path="/upload-data" component={() => <ManagerRoute component={UploadData} />} />
 
       <Route component={NotFound} />
     </Switch>
@@ -172,7 +173,7 @@ function AppRouter() {
 
 function AppContent() {
   const { user } = useAuth();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const isAuthPage = location === "/login" || location === "/register";
@@ -182,73 +183,89 @@ function AppContent() {
   }
 
   return (
-    <SidebarProvider style={{ "--sidebar-width": "16rem" }}>
-      <div className="flex h-screen w-full">
+    <SidebarProvider style={{ "--sidebar-width": "15.5rem" }}>
+      <div style={{ display: "flex", height: "100vh", width: "100%", background: "var(--brand-bg, #F2F7FC)" }}>
         <AppSidebar />
 
-        <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Header */}
-          <header className="flex items-center justify-between px-4 py-2 border-b bg-background">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger />
-              <div className="flex items-center gap-2">
-                <div className="font-semibold text-sm">
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+          {/* ── TOP NAV BAR ── */}
+          <header
+            className="top-nav-bar"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0 24px",
+              height: "58px",
+              flexShrink: 0,
+            }}
+          >
+            {/* Left: trigger + title */}
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <SidebarTrigger style={{ color: "#6B8299" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontWeight: 600, fontSize: "14px", color: "#1E2D3D" }}>
                   AI Workforce Optimization
-                </div>
+                </span>
                 {user && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  <span className="portal-badge">
                     {user.role === "manager" ? "Manager Portal" : "Employee Portal"}
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" />
-              </Button>
+            {/* Right: actions */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {/* Notification bell */}
+              <NotificationPanel onNavigate={(path) => navigate(path)} />
 
-              <Button
-                variant="ghost"
-                size="icon"
+              {/* AI Chat toggle */}
+              <button
                 onClick={() => setIsChatOpen(!isChatOpen)}
-                className={isChatOpen ? "bg-accent" : ""}
+                style={{
+                  background: isChatOpen ? "rgba(109,129,150,0.12)" : "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "8px",
+                  borderRadius: "8px",
+                  color: isChatOpen ? "#6A89A7" : "#6B8299",
+                  transition: "background 0.15s, color 0.15s",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                onMouseEnter={e => { if (!isChatOpen) e.currentTarget.style.background = "#F0F7FF"; }}
+                onMouseLeave={e => { if (!isChatOpen) e.currentTarget.style.background = "none"; }}
               >
-                <Bot className="h-5 w-5" />
-              </Button>
+                <Brain size={18} />
+              </button>
 
               <ThemeToggle />
 
-              {user && (
-                <div className="flex items-center gap-3 pl-4 border-l border-slate-200 ml-2">
-                  <div className="text-right flex flex-col items-end">
-                    <p className="text-sm font-bold text-slate-800 leading-tight">
-                      {user.username}
-                    </p>
-                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.1em] mt-0.5">
-                      {user.role}
-                    </p>
-                  </div>
-                  <Avatar className="h-9 w-9 border-2 border-white shadow-sm overflow-hidden bg-slate-100">
-                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-bold text-xs">
-                      {user.username?.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              )}
+              {/* Divider */}
+              <div style={{ width: "1px", height: "24px", background: "#D4E5F7", margin: "0 6px" }} />
+
+              {/* User profile dropdown */}
+              {user && <ProfileDropdown user={user} />}
             </div>
           </header>
 
-          {/* Page */}
-          <main className="flex-1 overflow-auto p-6">
+          {/* ── PAGE CONTENT ── */}
+          <main style={{ flex: 1, overflow: "auto", padding: "28px" }}>
             <AppRouter />
           </main>
         </div>
       </div>
 
-      {/* Floating AI Chat */}
-      {!isAuthPage && <AIChat isFloating={true} isOpen={isChatOpen} onToggle={() => setIsChatOpen(!isChatOpen)} />}
+      {/* ── FLOATING AI CHAT ── */}
+      {!isAuthPage && (
+        <AIChat
+          isFloating={true}
+          isOpen={isChatOpen}
+          onToggle={() => setIsChatOpen(!isChatOpen)}
+        />
+      )}
     </SidebarProvider>
   );
 }
@@ -259,14 +276,12 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <WorkforceProvider>
-          <AIErrorBoundary>
-            <TooltipProvider>
-              <AppContent />
-              <Toaster />
-            </TooltipProvider>
-          </AIErrorBoundary>
-        </WorkforceProvider>
+        <AIProvider>
+          <TooltipProvider>
+            <AppContent />
+            <Toaster />
+          </TooltipProvider>
+        </AIProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

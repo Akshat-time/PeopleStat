@@ -101,41 +101,40 @@ const AIChat = ({ isFloating = false, isOpen = true, onToggle }) => {
         {/* Floating Button */}
         {!isOpen && (
           <div className="fixed bottom-6 right-6 z-50">
-            <Button
+            <button
               onClick={onToggle}
-              className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
+              className="ai-float-btn"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
             >
-              <Brain className="h-6 w-6" />
-            </Button>
+              <Brain size={22} />
+            </button>
           </div>
         )}
 
         {/* Chat Window */}
         {isOpen && (
-          <div className="fixed bottom-6 right-6 z-50 w-96 h-[600px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col">
+          <div className="ai-chat-window fixed bottom-6 right-6 z-50 w-96 h-[600px] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-blue-50 rounded-t-lg">
-              <div className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-blue-600" />
-                <span className="font-semibold text-gray-900">AI Workforce Assistant</span>
+            <div className="ai-chat-header flex items-center justify-between p-4">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#6D8196', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Brain size={14} style={{ color: '#FFFFE3' }} />
+                </div>
+                <span className="chat-title" style={{ fontWeight: 600, fontSize: '14px', color: '#FFFFFF' }}>AI Workforce Assistant</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <button
                   onClick={() => setIsMinimized(!isMinimized)}
-                  className="h-8 w-8 p-0"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', borderRadius: '6px', padding: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBCBCB', transition: 'background 0.15s' }}
                 >
-                  {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                  {isMinimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+                </button>
+                <button
                   onClick={onToggle}
-                  className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', borderRadius: '6px', padding: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBCBCB', transition: 'background 0.15s' }}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  <X size={14} />
+                </button>
               </div>
             </div>
 
@@ -172,17 +171,14 @@ const AIChat = ({ isFloating = false, isOpen = true, onToggle }) => {
                       >
                         {message.type === "ai" && (
                           <div className="flex-shrink-0">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                              <Bot className="h-4 w-4 text-blue-600" />
+                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(136,189,242,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Bot size={13} style={{ color: '#6A89A7' }} />
                             </div>
                           </div>
                         )}
                         <div
-                          className={`max-w-[80%] p-3 rounded-lg ${
-                            message.type === "user"
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-100 text-gray-900"
-                          }`}
+                          className={message.type === "user" ? "ai-user-bubble" : "ai-bot-bubble"}
+                          style={{ maxWidth: '80%', padding: '10px 14px' }}
                         >
                           <div className="w-full max-w-full overflow-y-auto space-y-4">
                             {renderMessageContent(message)}
@@ -194,8 +190,8 @@ const AIChat = ({ isFloating = false, isOpen = true, onToggle }) => {
                         </div>
                         {message.type === "user" && (
                           <div className="flex-shrink-0">
-                            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                              <User className="h-4 w-4 text-gray-600" />
+                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#6A89A7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <User size={13} style={{ color: '#BDDDFC' }} />
                             </div>
                           </div>
                         )}
@@ -203,16 +199,14 @@ const AIChat = ({ isFloating = false, isOpen = true, onToggle }) => {
                     ))}
 
                     {isLoading && (
-                      <div className="flex gap-3 justify-start">
-                        <div className="flex-shrink-0">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Bot className="h-4 w-4 text-blue-600" />
-                          </div>
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-start' }}>
+                        <div style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(136,189,242,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Bot size={13} style={{ color: '#6A89A7' }} />
                         </div>
-                        <div className="bg-gray-100 p-3 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span className="text-sm text-gray-600">Analyzing workforce data...</span>
+                        <div className="ai-bot-bubble" style={{ padding: '10px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Loader2 size={13} style={{ color: '#6A89A7', animation: 'spin 0.8s linear infinite' }} />
+                            <span style={{ fontSize: '13px', color: '#6A89A7' }}>Analyzing workforce data...</span>
                           </div>
                         </div>
                       </div>
@@ -222,23 +216,23 @@ const AIChat = ({ isFloating = false, isOpen = true, onToggle }) => {
                 </ScrollArea>
 
                 {/* Input */}
-                <div className="p-4 border-t border-gray-200">
-                  <div className="flex gap-2">
+                <div style={{ padding: '12px 14px', borderTop: '1px solid #E6E6E6', background: '#FAFBFC' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <Input
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Ask about workforce intelligence..."
-                      className="flex-1"
+                      style={{ flex: 1, fontSize: '13px', borderColor: '#E6E6E6', borderRadius: '8px' }}
                       disabled={isLoading}
                     />
-                    <Button
+                    <button
                       onClick={handleSendMessage}
                       disabled={!inputMessage.trim() || isLoading}
-                      size="sm"
+                      style={{ background: '#053259', color: 'white', border: 'none', borderRadius: '8px', padding: '0 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: (!inputMessage.trim() || isLoading) ? 0.5 : 1, transition: 'opacity 0.15s, background 0.15s' }}
                     >
-                      <Send className="h-4 w-4" />
-                    </Button>
+                      <Send size={14} />
+                    </button>
                   </div>
                 </div>
               </>

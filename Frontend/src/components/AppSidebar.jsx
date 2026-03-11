@@ -14,6 +14,7 @@ import {
   Bot,
   ClipboardList,
   Activity,
+  ChevronRight,
 } from "lucide-react";
 
 import {
@@ -28,7 +29,6 @@ import {
   SidebarFooter,
 } from "../components/ui/sidebar.jsx";
 import { Link, useLocation } from "wouter";
-import { Button } from "../components/ui/button.jsx";
 import { useAuth } from "../lib/auth.jsx";
 import { queryClient } from "../lib/queryClient.js";
 
@@ -61,6 +61,84 @@ const systemItems = [
   { title: "Documentation", url: "/documentation", icon: BookOpen },
 ];
 
+/* ── Custom nav item that bypasses SidebarMenuButton's classes ── */
+function NavItem({ url, icon: Icon, title, isActive }) {
+  return (
+    <Link to={url}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "9px 14px",
+          borderRadius: "9px",
+          cursor: "pointer",
+          margin: "1px 4px",
+          position: "relative",
+          transition: "background 0.18s ease, color 0.18s ease",
+          background: isActive
+            ? "#6A89A7"
+            : "transparent",
+          color: isActive ? "#FFFFFF" : "#BDDDFC",
+          boxShadow: "none",
+        }}
+        onMouseEnter={e => {
+          if (!isActive) {
+            e.currentTarget.style.background = "rgba(136,189,242,0.13)";
+            e.currentTarget.style.color = "#FFFFFF";
+          }
+        }}
+        onMouseLeave={e => {
+          if (!isActive) {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "#BDDDFC";
+          }
+        }}
+      >
+        {/* Active left bar */}
+        {isActive && (
+          <span style={{
+            position: "absolute",
+            left: 0,
+            top: "20%",
+            height: "60%",
+            width: "3px",
+            background: "#88BDF2",
+            borderRadius: "0 3px 3px 0",
+          }} />
+        )}
+
+        {/* Icon */}
+        <span style={{ opacity: isActive ? 1 : 0.75, display: "flex", flexShrink: 0 }}>
+          {Icon && <Icon size={15} />}
+        </span>
+
+        {/* Label */}
+        <span style={{ fontSize: "13.5px", fontWeight: isActive ? 600 : 400, lineHeight: 1.3 }}>
+          {title}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+/* ── Group label ── */
+function NavLabel({ children }) {
+  return (
+    <div style={{
+      fontSize: "9.5px",
+      fontWeight: 700,
+      letterSpacing: "0.13em",
+      textTransform: "uppercase",
+      color: "rgba(136,189,242,0.45)",
+      padding: "8px 18px 4px 18px",
+      marginTop: "4px",
+    }}>
+      {children}
+    </div>
+  );
+}
+
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
@@ -72,177 +150,185 @@ export function AppSidebar() {
     window.location.href = "/login";
   };
 
-  const IconWrapper = ({ icon: Icon }) => Icon ? <Icon className="h-4 w-4" /> : null;
-
   return (
     <Sidebar>
-      <SidebarContent className="py-2">
-        {/* HEADER */}
-        <div className="px-4 py-2 mb-2">
-          <h1 className="text-lg font-bold">AI Workforce Optimization</h1>
-          <p className="text-xs text-muted-foreground">Enterprise HR Analytics</p>
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        background: "#053259",
+        overflow: "hidden",
+      }}>
+        {/* ── BRAND HEADER ── */}
+        <div style={{
+          padding: "18px 16px 16px",
+          borderBottom: "1px solid rgba(136,189,242,0.1)",
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "11px" }}>
+            {/* Logo pill */}
+            <div style={{
+              width: "34px",
+              height: "34px",
+              borderRadius: "10px",
+              background: "#6A89A7",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: "none",
+            }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div>
+              <h1 style={{ fontSize: "14px", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2, letterSpacing: "-0.01em" }}>
+                AI Workforce
+              </h1>
+              <p style={{ fontSize: "10px", color: "rgba(189,221,252,0.55)", marginTop: "2px", letterSpacing: "0.02em" }}>
+                Enterprise Analytics
+              </p>
+            </div>
+          </div>
+
+          {/* User role chip */}
+          {user && (
+            <div style={{
+              marginTop: "14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "9px",
+              padding: "7px 10px",
+              background: "rgba(136,189,242,0.1)",
+              borderRadius: "8px",
+              border: "1px solid rgba(136,189,242,0.15)",
+            }}>
+              <div style={{
+                width: "26px",
+                height: "26px",
+                borderRadius: "7px",
+                background: "#053259",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "10px",
+                fontWeight: 700,
+                color: "#BDDDFC",
+                flexShrink: 0,
+              }}>
+                {user.username?.slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontSize: "12px", fontWeight: 600, color: "#FFFFFF", lineHeight: 1.2 }}>{user.username}</div>
+                <div style={{ fontSize: "10px", color: "rgba(189,221,252,0.6)", textTransform: "capitalize" }}>{user.role}</div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* MAIN SECTION */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.filter(item => {
-                if (role === "employee") {
-                  if (item.title === "My Profile") {
-                    return { ...item, url: "/employee/profile" };
-                  }
-                  return ["Dashboard", "My Profile"].includes(item.title);
-                }
-                return item.title !== "My Profile";
-              }).map((item) => {
-                const finalItem = (role === "employee" && item.title === "My Profile") 
-                  ? { ...item, url: "/employee/profile" } 
-                  : item;
-                return (
-                  <SidebarMenuItem key={finalItem.title}>
-                    <SidebarMenuButton asChild isActive={location === finalItem.url}>
-                      <Link to={finalItem.url}>
-                        <IconWrapper icon={finalItem.icon} />
-                        <span>{finalItem.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* ── NAV ITEMS ── */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
 
-        {/* PORTAL SECTION */}
-        <SidebarGroup>
-          <SidebarGroupLabel>{role === "manager" ? "Insights" : "Employee Portal"}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {role === "employee" ? (
-                <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/softskills"}>
-                      <Link to="/softskills">
-                        <Brain className="h-4 w-4" />
-                        <span>Skill Overview</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+          {/* MAIN */}
+          <NavLabel>Main</NavLabel>
+          <div>
+            {menuItems.filter(item => {
+              if (role === "employee") return ["Dashboard", "My Profile"].includes(item.title);
+              return item.title !== "My Profile";
+            }).map(item => (
+              <NavItem key={item.title} url={item.url} icon={item.icon} title={item.title} isActive={location === item.url} />
+            ))}
+          </div>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/fatigue"}>
-                      <Link to="/fatigue">
-                        <AlertCircle className="h-4 w-4" />
-                        <span>Fatigue Status</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+          {/* INSIGHTS / EMPLOYEE PORTAL */}
+          <NavLabel>{role === "manager" ? "Insights" : "Employee Portal"}</NavLabel>
+          <div>
+            {role === "employee" ? (
+              <>
+                <NavItem url="/softskills" icon={Brain} title="Skill Overview" isActive={location === "/softskills"} />
+                <NavItem url="/fatigue" icon={AlertCircle} title="Fatigue Status" isActive={location === "/fatigue"} />
+                <NavItem url="/employee/data-form" icon={ClipboardList} title="Employee Data Form" isActive={location === "/employee/data-form"} />
+              </>
+            ) : (
+              <>
+                {insightsItems.map(item => (
+                  <NavItem key={item.title} url={item.url} icon={item.icon} title={item.title} isActive={location === item.url} />
+                ))}
+                <NavItem url="/six-by-six" icon={BarChart3} title="6×6 Workforce Analysis" isActive={location === "/six-by-six"} />
+              </>
+            )}
+          </div>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/employee/data-form"}>
-                      <Link to="/employee/data-form">
-                        <ClipboardList className="h-4 w-4" />
-                        <span>Employee Data Form</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
-              ) : (
-                <>
-                  {insightsItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={location === item.url}>
-                        <Link to={item.url}>
-                          <IconWrapper icon={item.icon} />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+          {/* ADMIN ONLY */}
+          {role === "manager" && (
+            <>
+              <NavLabel>Admin Data</NavLabel>
+              <div>
+                {adminDataItems.map(item => (
+                  <NavItem key={item.title} url={item.url} icon={item.icon} title={item.title} isActive={location === item.url} />
+                ))}
+              </div>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/six-by-six"}>
-                      <Link to="/six-by-six">
-                        <BarChart3 className="h-4 w-4" />
-                        <span>6×6 Workforce Analysis</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+              <NavLabel>Optimization</NavLabel>
+              <div>
+                {adminOptimizationItems.map(item => (
+                  <NavItem key={item.title} url={item.url} icon={item.icon} title={item.title} isActive={location === item.url} />
+                ))}
+              </div>
+            </>
+          )}
 
-        {/* ADMIN/MANAGER ONLY SECTION */}
-        {role === "manager" && (
-          <>
-            <SidebarGroup>
-              <SidebarGroupLabel>Admin Data</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminDataItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={location === item.url}>
-                        <Link to={item.url}>
-                          <IconWrapper icon={item.icon} />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+          {/* SYSTEM */}
+          <NavLabel>System</NavLabel>
+          <div>
+            {systemItems.map(item => (
+              <NavItem key={item.title} url={item.url} icon={item.icon} title={item.title} isActive={location === item.url} />
+            ))}
+          </div>
+        </div>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>Optimization</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminOptimizationItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={location === item.url}>
-                        <Link to={item.url}>
-                          <IconWrapper icon={item.icon} />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
-        )}
-
-        {/* SYSTEM SECTION */}
-        <SidebarGroup>
-          <SidebarGroupLabel>System</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {systemItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link to={item.url}>
-                      <IconWrapper icon={item.icon} />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter className="p-2">
-        <Button variant="outline" className="w-full" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
-      </SidebarFooter>
+        {/* ── FOOTER ── */}
+        <div style={{
+          padding: "12px 12px 16px",
+          borderTop: "1px solid rgba(136,189,242,0.1)",
+          flexShrink: 0,
+        }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "9px 14px",
+              fontSize: "13px",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontWeight: 500,
+              color: "rgba(189,221,252,0.7)",
+              background: "rgba(136,189,242,0.07)",
+              border: "1px solid rgba(136,189,242,0.13)",
+              borderRadius: "9px",
+              transition: "background 0.18s, color 0.18s",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = "rgba(136,189,242,0.16)";
+              e.currentTarget.style.color = "#FFFFFF";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "rgba(136,189,242,0.07)";
+              e.currentTarget.style.color = "rgba(189,221,252,0.7)";
+            }}
+          >
+            <LogOut size={14} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
     </Sidebar>
   );
 }

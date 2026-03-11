@@ -16,132 +16,44 @@ export const AIProvider = ({ children }) => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
-  const [realEmployees, setRealEmployees] = useState(null);
 
-  // Fetch live employees on mount
-  React.useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const res = await fetch("/api/employees", {
-          headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await res.json();
-        if (data.success && data.data) {
-          setRealEmployees(data.data);
-        }
-      } catch(err) {
-        console.error("AI Context failed to fetch real employees:", err);
-      }
-    };
-    fetchEmployees();
-  }, []);
-
-  // Comprehensive Workforce Data Engine - Derived from Central Data or Live Data
+  // Comprehensive Workforce Data Engine - Derived from Central Data
   const workforceData = useMemo(() => {
     const data = {};
-    const sourceEmployees = realEmployees || centralEmployees;
-
-    // Guard: don't crash if no employees loaded yet
-    if (!sourceEmployees || !Array.isArray(sourceEmployees)) return data;
-
-    sourceEmployees.forEach(e => {
-      try {
-        // Map live data fields securely, falling back to mock schema if it's from the mock array
-        const isLive = !!e.employeeMaster;
-        
-        let fitment = 0, fatigue = 0, utilization = 0, commScore = 0, leadScore = 0;
-        let name = "", id = "", role = "", department = "General", risk = "Low";
-        let hardSkills = [], softSkills = [];
-        
-        if (isLive) {
-            name = e.employeeMaster?.employeeName || "Unknown";
-            id = e.employeeMaster?.employeeId || e._id;
-            role = e.employeeMaster?.currentRole || "N/A";
-            
-            const fitmentResponses = e.fitmentResponses || {};
-            const workingHours = e.workingHours || {};
-            const processChars = e.processCharacteristics || {};
-            
-            const getScore = (val) => val === 'High' ? 90 : val === 'Medium' ? 60 : 30;
-            commScore = getScore(fitmentResponses.communicationLevel || 'Medium');
-            leadScore = getScore(fitmentResponses.leadershipPotential || 'Medium');
-            const adaptScore = getScore(fitmentResponses.adaptability || 'Medium');
-            fitment = Math.round((commScore + adaptScore) / 2);
-            
-            const totalHours = Object.values(workingHours)
-                .filter(val => typeof val === 'number' || (typeof val === 'string' && !isNaN(val)))
-                .reduce((sum, val) => sum + Number(val || 0), 0) || 160;
-            utilization = (totalHours / 160) * 100;
-            fatigue = Math.min(100, Math.round(utilization * 0.8));
-            
-            risk = fatigue >= 75 ? "Critical" : fatigue >= 50 ? "High" : "Low";
-            
-            hardSkills = processChars.coreSkills ? processChars.coreSkills.split(',').map(s=>s.trim()) : [];
-            softSkills = processChars.tools? processChars.tools.split(',').map(s=>s.trim()) : [];
-        } else {
-            name = e.name || "Unknown";
-            id = e.employeeId || e.id;
-            role = e.position || "";
-            department = e.department || "General";
-            fitment = e.scores?.fitment || 0;
-            fatigue = e.scores?.fatigue || 0;
-            commScore = e.scores?.skill || 0;
-            leadScore = e.scores?.aptitude || 0;
-            utilization = e.scores?.utilization || 0;
-            risk = e.scores ? (getOverallRisk(e) || "Low") : "Low";
-            hardSkills = e.skills?.hard || [];
-            softSkills = e.skills?.soft || [];
-        }
-
-        if (!name) return; // skip nameless employees
-
-        data[name] = {
-          id,
-          role,
-          department,
-          fitment,
-          fatigue,
-          softSkills: {
-            leadership: leadScore,
-            communication: commScore,
-            teamwork: 80
-          },
-          sixBySix: {
-            fatigue: fatigue > 75 ? "Critical" : fatigue > 45 ? "Medium" : "Low",
-            productivity: "Stable",
-            engagement: "High"
-          },
-          risk,
-          recommendations: [
-            fatigue > 75 ? "Reduce workload by 20%" : "Continue current path",
-            fitment < 70 ? "Target for reskilling" : "Mentor others",
-            "Schedule monthly performance reviews"
-          ],
-          skills: [...hardSkills, ...softSkills],
-          utilization,
-          lastReview: "2024-01-15"
-        };
-      } catch(empErr) {
-        console.warn("AIContext: skipped malformed employee record", empErr);
-      }
+    centralEmployees.forEach(e => {
+      data[e.name] = {
+        id: e.employeeId,
+        role: e.position,
+        department: e.department,
+        fitment: e.scores.fitment,
+        fatigue: e.scores.fatigue,
+        softSkills: {
+          leadership: e.scores.aptitude,
+          communication: e.scores.skill,
+          teamwork: 80 // Placeholder for specific teamwork metric
+        },
+        sixBySix: {
+          fatigue: e.scores.fatigue > 75 ? "Critical" : e.scores.fatigue > 45 ? "Medium" : "Low",
+          productivity: e.scores.productivity > 75 ? "Strong" : "Stable",
+          engagement: "High"
+        },
+        risk: getOverallRisk(e),
+        recommendations: [
+          e.scores.fatigue > 75 ? "Reduce workload by 20%" : "Continue current path",
+          e.scores.fitment < 70 ? "Target for reskilling" : "Mentor others",
+          "Schedule monthly performance reviews"
+        ],
+        skills: [...e.skills.hard, ...e.skills.soft],
+        utilization: e.scores.utilization,
+        lastReview: "2024-01-15"
+      };
     });
     return data;
-  }, [realEmployees]);
+  }, []);
 
   // Enhanced AI message processing with employee detection
   const sendMessage = async (message) => {
     setIsLoading(true);
-
-    // Initial user message
-    const userMessage = {
-      id: Date.now(),
-      type: "user",
-      content: message,
-      timestamp: new Date()
-    };
-
-    // Add user message
-    setMessages(prev => [...prev, userMessage]);
 
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1200));

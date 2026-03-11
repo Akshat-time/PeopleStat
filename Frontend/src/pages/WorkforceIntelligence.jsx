@@ -370,23 +370,27 @@ export default function WorkforceIntelligence() {
         </div>
 
         {/* Action Center */}
-        <Card className="p-8 bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] border-[#E5E7EB] rounded-xl shadow-lg text-white">
-          <div className="text-center">
-            <h2 className="text-3xl font-semibold mb-4">AI Workforce Optimization Center</h2>
-            <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+        <Card className="p-8 bg-white border border-slate-200 rounded-2xl shadow-sm relative overflow-hidden group">
+          <div className="text-center relative z-10">
+            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">AI Workforce Optimization Center</h2>
+            <p className="text-slate-500 mb-8 max-w-2xl mx-auto text-lg leading-relaxed">
               Leverage advanced AI algorithms to optimize workforce performance, predict future needs,
               and maximize organizational productivity through data-driven insights.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="bg-white text-[#2563EB] hover:bg-gray-100 px-8 py-3 text-lg font-semibold" onClick={() => toast({ title: "Generating Report", description: "Advanced AI analysis in progress..." })}>
-                <Brain className="h-5 w-5 mr-2" />
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg font-black uppercase tracking-widest shadow-lg shadow-blue-200" onClick={() => toast({ title: "Generating Report", description: "Advanced AI analysis in progress..." })}>
+                <Brain className="h-6 w-5 mr-3" />
                 Generate AI Report
               </Button>
-              <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#2563EB] px-8 py-3 text-lg font-semibold" onClick={() => navigate("/")}>
-                <BarChart3 className="h-5 w-5 mr-2" />
+              <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 px-8 py-6 text-lg font-bold" onClick={() => navigate("/")}>
+                <BarChart3 className="h-5 w-5 mr-3 text-blue-600" />
                 View Analytics Dashboard
               </Button>
             </div>
+          </div>
+          {/* Subtle decoration */}
+          <div className="absolute right-[-20px] bottom-[-20px] opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
+            <Zap className="h-64 w-64 text-slate-900" />
           </div>
         </Card>
       </div>

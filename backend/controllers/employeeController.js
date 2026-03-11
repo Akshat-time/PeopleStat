@@ -1,84 +1,147 @@
-const Employee = require('../models/Employee');
-const pdfParse = require('pdf-parse');
-const { extractSkillsFromText } = require('../ai-engine/nlpExtractor');
+import Employee from "../models/Employee.js";
 
-exports.uploadResume = async (req, res) => {
+export const addEmployee = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ success: false, error: 'No resume file uploaded' });
-
-    let textContent = '';
-    if (req.file.mimetype === 'application/pdf') {
-      const data = await pdfParse(req.file.buffer);
-      textContent = data.text;
-    } else {
-      textContent = req.file.buffer.toString('utf-8');
-    }
-
-    const extractedSkills = extractSkillsFromText(textContent);
-
-    let employee = await Employee.findOne({ userId: req.user.id });
-    if (!employee) return res.status(404).json({ success: false, error: 'Employee not found' });
-
-    const newSkills = Array.from(new Set([...employee.skills, ...extractedSkills]));
-    employee.skills = newSkills;
-    await employee.save();
-
-    res.json({ success: true, data: { message: 'Resume parsed successfully', extractedSkills, employee } });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Server Error' });
+    const emp = await Employee.create(req.body);
+    res.json({ success: true, data: emp });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
-exports.getEmployees = async (req, res) => {
+export const getEmployees = async (req, res) => {
   try {
-    const { email } = req.query;
-    let query = {};
-    
-    if (email) {
-      const User = require('../models/User');
-      const user = await User.findOne({ email });
-      if (user) {
-        query = { userId: user._id };
-      } else {
-        return res.json({ success: true, data: [] });
+    const data = await Employee.find();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const uploadBulkEmployees = async (req, res) => {
+  try {
+    const { employees } = req.body;
+
+    if (!Array.isArray(employees) || employees.length === 0) {
+      return res.status(400).json({ error: 'No employees provided' });
+    }
+
+    const savedEmployees = [];
+    for (const emp of employees) {
+      try {
+        const userid = emp.userid || `EMP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        const employeeDoc = await Employee.findOneAndUpdate(
+          { email: emp.email },
+          {
+            userid,
+            name: emp.name,
+            email: emp.email,
+            department: emp.department || '',
+            position: emp.position || '',
+            salary: emp.salary ? parseInt(emp.salary) : 0,
+            productivity: emp.productivity ? parseInt(emp.productivity) : 0,
+            utilization: emp.utilization ? parseInt(emp.utilization) : 0,
+            fitmentScore: emp.fitmentScore ? parseFloat(emp.fitmentScore) : 0,
+            updatedAt: new Date(),
+          },
+          { 
+            upsert: true, 
+            new: true,
+            runValidators: false 
+          }
+        );
+        
+        savedEmployees.push(employeeDoc);
+      } catch (err) {
+        console.error(`Error saving employee ${emp.email}:`, err.message);
       }
     }
 
-    const data = await Employee.find(query).populate('userId', 'username email role');
-    res.json({ success: true, data });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ success: false, error: 'Server Error' });
+    res.json({
+      success: true,
+      count: savedEmployees.length,
+      employees: savedEmployees,
+    });
+  } catch (error) {
+    console.error('Bulk upload error:', error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-exports.updateEmployeeData = async (req, res) => {
+export const getEmployeeById = async (req, res) => {
   try {
-    const { employeeMaster, processCharacteristics, experienceCompensation, fitmentResponses, workingHours } = req.body;
-    
-    let employee = await Employee.findOne({ userId: req.user.id });
+    const { id } = req.params;
+    const employee = await Employee.findById(id);
     
     if (!employee) {
-      employee = new Employee({ userId: req.user.id });
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+    
+    res.json({ success: true, data: employee });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await Employee.findByIdAndUpdate(id, req.body, { new: true });
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Employee.findByIdAndDelete(id);
+    res.json({ success: true, message: 'Employee deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getEmployeeStats = async (req, res) => {
+  try {
+    const employees = await Employee.find();
+    
+    if (employees.length === 0) {
+      return res.json({
+        success: true,
+        stats: {
+          totalEmployees: 0,
+          avgFitmentScore: 0,
+          avgProductivity: 0,
+          avgUtilization: 0,
+          highPerformers: 0,
+          lowUtilization: 0,
+        },
+      });
     }
 
-    // Update fields
-    if (employeeMaster) employee.employeeMaster = employeeMaster;
-    if (processCharacteristics) employee.processCharacteristics = processCharacteristics;
-    if (experienceCompensation) employee.experienceCompensation = experienceCompensation;
-    if (fitmentResponses) employee.fitmentResponses = fitmentResponses;
-    if (workingHours) employee.workingHours = workingHours;
+    const totalEmployees = employees.length;
+    const avgFitmentScore = employees.reduce((sum, e) => sum + (e.fitmentScore || 0), 0) / totalEmployees;
+    const avgProductivity = employees.reduce((sum, e) => sum + (e.productivity || 0), 0) / totalEmployees;
+    const avgUtilization = employees.reduce((sum, e) => sum + (e.utilization || 0), 0) / totalEmployees;
+    const highPerformers = employees.filter(e => (e.productivity || 0) > 90).length;
+    const lowUtilization = employees.filter(e => (e.utilization || 0) < 50).length;
 
-    // Optional: sync some fields to the root for easier querying
-    if (employeeMaster?.department) employee.department = employeeMaster.department;
-
-    await employee.save();
-
-    res.json({ success: true, data: employee });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ success: false, error: 'Server Error' });
+    res.json({
+      success: true,
+      stats: {
+        totalEmployees,
+        avgFitmentScore: parseFloat(avgFitmentScore.toFixed(2)),
+        avgProductivity: parseFloat(avgProductivity.toFixed(2)),
+        avgUtilization: parseFloat(avgUtilization.toFixed(2)),
+        highPerformers,
+        lowUtilization,
+      },
+      employees,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
