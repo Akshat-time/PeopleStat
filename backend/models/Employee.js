@@ -17,6 +17,32 @@ const EmployeeSchema = new mongoose.Schema({
   education: [{ type: String }],
   certifications: [{ type: String }],
   
+  // WDT & Workload Data
+  workingHours: {
+    customerInvoicing: { type: Number, default: 0 },
+    invoicePosting: { type: Number, default: 0 },
+    paymentProcessing: { type: Number, default: 0 },
+    mdmSupport: { type: Number, default: 0 },
+    recordToReport: { type: Number, default: 0 },
+    treasury: { type: Number, default: 0 },
+    taxation: { type: Number, default: 0 },
+    meetings: { type: Number, default: 0 },
+    training: { type: Number, default: 0 },
+    others: { type: Number, default: 0 },
+    standardWorkingHours: { type: Number, default: 160 },
+    actualWorkingHours: { type: Number, default: 160 },
+    overtimeHours: { type: Number, default: 0 },
+    weekendWork: { type: String },
+    multipleRoles: { type: String },
+    deadlinePressure: { type: String }
+  },
+
+  // Metadata from Master
+  employeeMaster: { type: Object },
+  processCharacteristics: { type: Object },
+  experienceCompensation: { type: Object },
+  fitmentResponses: { type: Object },
+
   // AI Analytics
   fitmentScore: { type: Number, default: 0 },
   recommendedRole: { type: String, default: 'Pending Analysis', index: true },

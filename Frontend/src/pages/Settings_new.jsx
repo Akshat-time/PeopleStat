@@ -1,4 +1,3 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo } from "react";
 import { Settings as SettingsIcon, Upload, Save, MapPin, Users, Database, Building2, Target, CheckCircle } from "lucide-react";
+import { employees } from "@/data/mockEmployeeData";
 
 export default function Settings() {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("map");
   const [newDepartmentName, setNewDepartmentName] = useState("");

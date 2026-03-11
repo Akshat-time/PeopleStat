@@ -1,16 +1,18 @@
-/**
- * Aggregates workforce-wide KPIs from the dynamic data.
- */
-export function getWorkforceKPIs(employees = []) {
-    const count = employees.length;
-    if (count === 0) return { totalEmployees: 0, avgFitment: 0, burnoutRisk: 0, automationSavings: "0M", rawAutomationSavings: 0 };
+import { employees, getOverallRisk, calculateFTE } from "../data/mockEmployeeData";
 
-    const avgFitment = employees.reduce((sum, e) => sum + (e.scores?.fitment || 0), 0) / count;
-    const highFatigue = employees.filter(e => (e.scores?.fatigue || 0) >= 75).length;
+/**
+ * Aggregates workforce-wide KPIs from the mock data.
+ */
+export function getWorkforceKPIs() {
+    const count = employees.length;
+    if (count === 0) return {};
+
+    const avgFitment = employees.reduce((sum, e) => sum + e.scores.fitment, 0) / count;
+    const highFatigue = employees.filter(e => e.scores.fatigue >= 75).length;
     const highFatiguePct = (highFatigue / count) * 100;
 
     const totalAutomationSavings = employees.reduce((sum, e) => {
-        return sum + ((e.scores?.automationPotential || 50) * (e.salary || 80000) / 100);
+        return sum + (e.scores.automationPotential * e.salary / 100);
     }, 0);
 
     return {
@@ -25,17 +27,17 @@ export function getWorkforceKPIs(employees = []) {
 /**
  * Gets department-level distributions for charts.
  */
-export function getDepartmentDistributions(employees = []) {
+export function getDepartmentDistributions() {
     const departments = [...new Set(employees.map(e => e.department))];
 
     return departments.map(dept => {
         const deptEmps = employees.filter(e => e.department === dept);
-        const avgFitment = deptEmps.reduce((sum, e) => sum + (e.scores?.fitment || 0), 0) / deptEmps.length;
+        const avgFitment = deptEmps.reduce((sum, e) => sum + e.scores.fitment, 0) / deptEmps.length;
         return {
             name: dept,
             fitment: Math.round(avgFitment),
             count: deptEmps.length,
-            utilization: Math.round(deptEmps.reduce((sum, e) => sum + (e.scores?.utilization || 0), 0) / deptEmps.length)
+            utilization: Math.round(deptEmps.reduce((sum, e) => sum + e.scores.utilization, 0) / deptEmps.length)
         };
     });
 }
@@ -43,10 +45,10 @@ export function getDepartmentDistributions(employees = []) {
 /**
  * Generates AI workforce signals based on real data scans.
  */
-export function getAISignals(employees = []) {
+export function getAISignals() {
     const signals = [];
 
-    const highFatigue = employees.filter(e => (e.scores?.fatigue || 0) >= 75);
+    const highFatigue = employees.filter(e => e.scores.fatigue >= 75);
     if (highFatigue.length > 0) {
         signals.push({
             type: "fatigue",
@@ -56,7 +58,7 @@ export function getAISignals(employees = []) {
         });
     }
 
-    const lowFitment = employees.filter(e => (e.scores?.fitment || 0) < 70);
+    const lowFitment = employees.filter(e => e.scores.fitment < 70);
     if (lowFitment.length > 0) {
         signals.push({
             type: "fitment",
@@ -66,7 +68,7 @@ export function getAISignals(employees = []) {
         });
     }
 
-    const automationCandidates = employees.filter(e => (e.scores?.automationPotential || 0) >= 70);
+    const automationCandidates = employees.filter(e => e.scores.automationPotential >= 70);
     if (automationCandidates.length > 0) {
         signals.push({
             type: "automation",

@@ -1,4 +1,3 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import React, { useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
@@ -25,23 +24,21 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { employees } from "@/data/mockEmployeeData";
 import { getWorkforceKPIs, getDepartmentDistributions, getAISignals } from "@/lib/workforce-utils";
 
 const COLORS = ["#3b82f6", "#93c5fd", "#e5e7eb", "#1d4ed8", "#60a5fa"];
 
 export default function Dashboard() {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [selectedMetric, setSelectedMetric] = useState(null);
 
   const go = (path) => navigate(path);
 
-  const kpis = useMemo(() => getWorkforceKPIs(employees), [employees]);
-  const deptDist = useMemo(() => getDepartmentDistributions(employees), [employees]);
-  const aiSignals = useMemo(() => getAISignals(employees), [employees]);
+  const kpis = useMemo(() => getWorkforceKPIs(), []);
+  const deptDist = useMemo(() => getDepartmentDistributions(), []);
+  const aiSignals = useMemo(() => getAISignals(), []);
 
   const derivedData = useMemo(() => {
     return {

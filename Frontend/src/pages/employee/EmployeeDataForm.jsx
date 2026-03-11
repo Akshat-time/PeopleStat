@@ -1,4 +1,3 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
+import api from "@/services/api";
+import { useLocation } from "wouter";
 import { Save, Send, User, Briefcase, Clock, Star, TrendingUp, Info } from "lucide-react";
 
 /**
@@ -17,38 +18,119 @@ import { Save, Send, User, Briefcase, Clock, Star, TrendingUp, Info } from "luci
  * All basic organizational fields are now dropdowns derived from mock data.
  */
 const EmployeeDataForm = () => {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
     const { user } = useAuth();
     const { toast } = useToast();
+    const [, navigate] = useLocation();
 
-    // Find the current employee's data or use a fallback. Ensure it's never undefined.
-    const currentEmployee = employees.find(e => e.email === user?.email) || employees[0] || {};
+    // Fetch existing employee data to prefill form if available
+    const [employeesList, setEmployeesList] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Derived options from mock data
-    const allDepartments = [...new Set(employees.map(e => e.department))].filter(Boolean);
-    const allManagers = [...new Set(employees.map(e => e.name))].filter(Boolean);
+    React.useEffect(() => {
+        const fetchAndPrefill = async () => {
+            try {
+                // Fetch all employees to populate dropdowns (already exists)
+                const res = await api.get('/employees');
+                if (res.data?.success && res.data?.data) {
+                    setEmployeesList(res.data.data);
+                    
+                    // NEW: Find current user's record and pre-fill form
+                    const currentEmp = res.data.data.find(e => e.userId?.email === user?.email);
+                    if (currentEmp) {
+                        const m = currentEmp.employeeMaster || {};
+                        const p = currentEmp.processCharacteristics || {};
+                        const c = currentEmp.experienceCompensation || {};
+                        const f = currentEmp.fitmentResponses || {};
+                        const w = currentEmp.workingHours || {};
+
+                        setFormData({
+                            companyName: m.companyName || "Tech Corp",
+                            employeeName: m.employeeName || user?.username || "",
+                            employeeId: m.employeeId || "",
+                            department: m.department || "Finance",
+                            currentTeamName: m.currentTeamName || "",
+                            designation: m.designation || "",
+                            grade: m.grade || "Grade 2",
+                            band: m.band || "D2",
+                            location: m.location || "",
+                            reportingManager: m.managerName || "",
+                            employmentType: m.employmentType || "Full-Time",
+                            activeRole: m.activeRole || "Yes",
+                            primaryProcess: p.primaryProcess || "Invoicing",
+                            secondaryProcess: p.secondaryProcess || "None",
+                            processName: p.processName || "",
+                            roleDescription: p.roleDescription || "",
+                            processCategory: p.processCategory || "Transactional",
+                            consolidationType: p.consolidationType || "Consolidated",
+                            totalExperience: c.totalExperience || 0,
+                            experienceInCurrentRole: c.experienceInCurrentRole || 0,
+                            currentCTC: c.currentCTC || 0,
+                            benchmarkCTC: c.benchmarkCTC || 0,
+                            ctcBenchmark: c.ctcBenchmark || "At Median",
+                            pmsRating: f.pmsRating || "Meets Expectations",
+                            workComplexity: f.complexityOfWork || "The employee role is similar to peers",
+                            changeReadiness: f.changeReadyTechSavviness || "",
+                            customerOrientation: f.serviceCustomerOrientation || "",
+                            teamCollaboration: f.teamPlayerCollaboration || "",
+                            communication: f.communicativeness || "",
+                            selfMotivation: f.selfMotivated || "",
+                            certifications: f.additionalQualifications || "",
+                            locationPreference: f.locationPreference || "The employee could be amenable to relocate",
+                            multiplexer: f.multiplexer || "",
+                            experienceInCurrentRoleQualitative: f.experienceInCurrentRole || "Between 5 to 8 years",
+                            totalWorkExperienceQualitative: f.totalWorkExperience || "Between 5 to 8 years",
+                            customerInvoicing: w.customerInvoicing || 0,
+                            invoicePosting: w.invoicePosting || 0,
+                            paymentProcessing: w.paymentProcessing || 0,
+                            mdmSupport: w.mdmSupport || 0,
+                            recordToReport: w.recordToReport || 0,
+                            treasury: w.treasury || 0,
+                            taxation: w.taxation || 0,
+                            meetings: w.meetings || 0,
+                            training: w.training || 0,
+                            others: w.others || 0,
+                            standardWorkingHours: w.standardWorkingHours || 160,
+                            actualWorkingHours: w.actualWorkingHours || 160,
+                            overtimeHours: w.overtimeHours || 0,
+                            weekendWork: w.weekendWork || "No",
+                            multipleRoles: w.multipleRoles || "No",
+                            deadlinePressure: w.deadlinePressure || "Medium",
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load employee info:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchAndPrefill();
+    }, [user?.email, user?.username]);
+
+    // Derived options from DB or fallback
+    const allDepartments = employeesList.length > 0 ? [...new Set(employeesList.map(e => e.employeeMaster?.department))].filter(Boolean) : ["Finance", "IT", "Engineering", "Analytics", "Operations"];
+    const allManagers = employeesList.length > 0 ? [...new Set(employeesList.map(e => e.employeeMaster?.employeeName))].filter(Boolean) : ["Ramesh Kumar", "Leadership Team"];
     const companyNames = ["Tech Corp", "Global Solutions", "Innovate Ltd"];
     const teamMapping = {
         "Finance": ["Accounts Receivable", "Accounts Payable", "General Ledger", "Taxation"],
         "IT": ["Infrastructure", "Software Development", "Cybersecurity", "IT Support"],
         "Engineering": ["Hardware", "DevOps", "R&D"],
         "Analytics": ["Data Science", "Business Intelligence", "Market Research"],
+        "Operations": ["Fulfillment", "Customer Success", "Logistics", "Supply Chain"],
     };
 
     const [formData, setFormData] = useState({
         // 1. Employee Information
         companyName: "Tech Corp",
-        employeeName: currentEmployee?.name || user?.email?.split('@')[0] || "Employee",
-        employeeId: currentEmployee?.employeeId || "EMP-001",
-        department: currentEmployee?.department || "Finance",
+        employeeName: user?.username || "Employee Name",
+        employeeId: user?.employeeId || "EMP000",
+        department: "Finance",
         currentTeamName: "",
-        designation: currentEmployee?.position || currentEmployee?.recommendedRole || "Senior Analyst",
+        designation: "Senior Analyst",
         grade: "Grade 2",
         band: "D2",
         location: "Mumbai",
-        reportingManager: allManagers[0] || "Ramesh Kumar",
+        reportingManager: "Ramesh Kumar",
         employmentType: "Full-Time",
         activeRole: "Yes",
 
@@ -61,9 +143,9 @@ const EmployeeDataForm = () => {
         consolidationType: "Consolidated",
 
         // 3. Experience & Compensation
-        totalExperience: currentEmployee?.experienceYears || 0,
+        totalExperience: 0,
         experienceInCurrentRole: 2,
-        currentCTC: currentEmployee?.salary || 0,
+        currentCTC: 0,
         benchmarkCTC: 0,
         ctcBenchmark: "At Median",
 
@@ -82,15 +164,16 @@ const EmployeeDataForm = () => {
         totalWorkExperienceQualitative: "Between 5 to 8 years",
 
         // 5. Working Hours - Process-wise
-        hoursInvoicing: 0,
-        hoursCollections: 0,
-        hoursPayments: 0,
-        hoursR2R: 0,
-        hoursTaxation: 0,
-        hoursTreasury: 0,
-        hoursMeetings: 0,
-        hoursTraining: 0,
-        hoursOthers: 0,
+        customerInvoicing: 0,
+        invoicePosting: 0,
+        paymentProcessing: 0,
+        mdmSupport: 0,
+        recordToReport: 0,
+        treasury: 0,
+        taxation: 0,
+        meetings: 0,
+        training: 0,
+        others: 0,
 
         // 6. Working Hours - General
         standardWorkingHours: 160,
@@ -118,10 +201,10 @@ const EmployeeDataForm = () => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("Submitting form (Raw Data):", {
-            employeeMaster: {
+        try {
+            const employeeMaster = {
                 companyName: formData.companyName,
                 employeeName: formData.employeeName,
                 employeeId: formData.employeeId,
@@ -134,23 +217,26 @@ const EmployeeDataForm = () => {
                 managerName: formData.reportingManager,
                 activeRole: formData.activeRole,
                 employmentType: formData.employmentType
-            },
-            processCharacteristics: {
+            };
+
+            const processCharacteristics = {
                 primaryProcess: formData.primaryProcess,
                 secondaryProcess: formData.secondaryProcess,
                 processName: formData.processName,
                 roleDescription: formData.roleDescription,
                 processCategory: formData.processCategory,
                 consolidationType: formData.consolidationType
-            },
-            experienceCompensation: {
+            };
+
+            const experienceCompensation = {
                 totalExperience: formData.totalExperience,
                 experienceInCurrentRole: formData.experienceInCurrentRole,
                 currentCTC: formData.currentCTC,
                 benchmarkCTC: formData.benchmarkCTC,
                 ctcBenchmark: formData.ctcBenchmark
-            },
-            fitmentResponses: {
+            };
+
+            const fitmentResponses = {
                 pmsRating: formData.pmsRating,
                 complexityOfWork: formData.workComplexity,
                 changeReadyTechSavviness: formData.changeReadiness,
@@ -163,29 +249,53 @@ const EmployeeDataForm = () => {
                 multiplexer: formData.multiplexer,
                 communicativeness: formData.communication,
                 selfMotivated: formData.selfMotivation
-            },
-            workingHours: {
-                hoursInvoicing: formData.hoursInvoicing,
-                hoursCollections: formData.hoursCollections,
-                hoursPayments: formData.hoursPayments,
-                hoursR2R: formData.hoursR2R,
-                hoursTaxation: formData.hoursTaxation,
-                hoursTreasury: formData.hoursTreasury,
-                hoursMeetings: formData.hoursMeetings,
-                hoursTraining: formData.hoursTraining,
-                hoursOthers: formData.hoursOthers,
-                standardWorkingHours: formData.standardWorkingHours,
-                actualWorkingHours: formData.actualWorkingHours,
-                overtimeHours: formData.overtimeHours,
+            };
+
+            const workingHours = {
+                customerInvoicing: Number(formData.customerInvoicing) || 0,
+                invoicePosting: Number(formData.invoicePosting) || 0,
+                paymentProcessing: Number(formData.paymentProcessing) || 0,
+                mdmSupport: Number(formData.mdmSupport) || 0,
+                recordToReport: Number(formData.recordToReport) || 0,
+                treasury: Number(formData.treasury) || 0,
+                taxation: Number(formData.taxation) || 0,
+                meetings: Number(formData.meetings) || 0,
+                training: Number(formData.training) || 0,
+                others: Number(formData.others) || 0,
+                standardWorkingHours: Number(formData.standardWorkingHours) || 160,
+                actualWorkingHours: Number(formData.actualWorkingHours) || 160,
+                overtimeHours: Number(formData.overtimeHours) || 0,
                 weekendWork: formData.weekendWork,
                 multipleRoles: formData.multipleRoles,
                 deadlinePressure: formData.deadlinePressure
-            }
-        });
-        toast({
-            title: "Employee data submitted successfully",
-            description: "Your profile information has been updated.",
-        });
+            };
+
+            const payload = {
+                employeeMaster,
+                processCharacteristics,
+                experienceCompensation,
+                fitmentResponses,
+                workingHours
+            };
+
+            console.log("Submitting form (Payload):", payload);
+
+            await api.post(`/employees/update-data`, payload);
+
+            toast({
+                title: "Employee data submitted successfully",
+                description: "Your profile information has been updated.",
+            });
+            
+            navigate("/fatigue");
+        } catch (error) {
+            console.error("Error submitting employee data:", error);
+            toast({
+                title: "Error submitting data",
+                description: error.response?.data?.message || error.message || "Failed to communicate with the server.",
+                variant: "destructive",
+            });
+        }
     };
 
     const SectionHeader = ({ icon: Icon, title, description }) => (
@@ -199,6 +309,10 @@ const EmployeeDataForm = () => {
             </div>
         </div>
     );
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-screen"><p className="text-muted-foreground">Loading specific configuration logic...</p></div>;
+    }
 
     return (
         <div className="container mx-auto max-w-5xl py-8 px-4">
@@ -567,15 +681,16 @@ const EmployeeDataForm = () => {
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {[
-                            { id: "hoursInvoicing", label: "Invoicing" },
-                            { id: "hoursCollections", label: "Collections" },
-                            { id: "hoursPayments", label: "Payments" },
-                            { id: "hoursR2R", label: "R2R" },
-                            { id: "hoursTaxation", label: "Taxation" },
-                            { id: "hoursTreasury", label: "Treasury" },
-                            { id: "hoursMeetings", label: "Meetings" },
-                            { id: "hoursTraining", label: "Training" },
-                            { id: "hoursOthers", label: "Others" },
+                            { id: "customerInvoicing", label: "Customer Invoicing" },
+                            { id: "invoicePosting", label: "Invoice Posting" },
+                            { id: "paymentProcessing", label: "Payment Processing" },
+                            { id: "mdmSupport", label: "MDM Support" },
+                            { id: "recordToReport", label: "Record to Report" },
+                            { id: "treasury", label: "Treasury" },
+                            { id: "taxation", label: "Taxation" },
+                            { id: "meetings", label: "Meetings" },
+                            { id: "training", label: "Training" },
+                            { id: "others", label: "Others" },
                         ].map((field) => (
                             <div key={field.id} className="space-y-1">
                                 <Label className="text-xs">{field.label}</Label>

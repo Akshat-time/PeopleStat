@@ -7,7 +7,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, FileText, Users, Activity, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/services/api";
 
 export default function UploadData() {
   const { toast } = useToast();
@@ -23,9 +22,10 @@ export default function UploadData() {
 
     setFile(selected);
 
-    // MOCK preview just to show the user a file is staged
+    // MOCK preview (frontend only)
     setPreview([
-      { col1: selected.name, col2: `${Math.round(selected.size / 1024)} KB`, col3: "Pending", col4: "-" },
+      { col1: "John Doe", col2: "john@company.com", col3: "Engineering", col4: "82%" },
+      { col1: "Jane Smith", col2: "jane@company.com", col3: "Finance", col4: "76%" },
     ]);
   };
 
@@ -41,37 +41,16 @@ export default function UploadData() {
 
     setIsUploading(true);
 
-    try {
-      if (activeTab === "employees") {
-        const formData = new FormData();
-        formData.append("resume", file);
-
-        const response = await api.postMultipart("/employees/upload-resume", formData);
-        
-        toast({
-          title: "Upload successful",
-          description: `Extracted Skills: ${response.extractedSkills?.join(', ') || 'None found'}`,
-        });
-      } else {
-        // Other tabs not fully implemented for this demo
-        await new Promise(r => setTimeout(r, 1000));
-        toast({
-          title: "Upload successful",
-          description: "Data uploaded and queued for processing",
-        });
-      }
-
+    // BACKEND WILL BE CONNECTED LATER
+    setTimeout(() => {
+      setIsUploading(false);
+      toast({
+        title: "Upload successful",
+        description: "Data uploaded and queued for processing",
+      });
       setFile(null);
       setPreview([]);
-    } catch (err) {
-      toast({
-        title: "Upload Failed",
-        description: err.message || "Failed to process the upload.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
-    }
+    }, 1500);
   };
 
   return (
@@ -80,7 +59,7 @@ export default function UploadData() {
       <div>
         <h1 className="text-3xl font-semibold">Upload Data</h1>
         <p className="text-sm text-muted-foreground">
-          Upload workforce data using Resumes, CSV, or Excel files. 
+          Upload workforce data using CSV or Excel files. Manual entry is not required.
         </p>
       </div>
 
@@ -89,7 +68,7 @@ export default function UploadData() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="employees">
             <Users className="h-4 w-4 mr-2" />
-            Resumes / Employee Data
+            Employees
           </TabsTrigger>
           <TabsTrigger value="jds">
             <FileText className="h-4 w-4 mr-2" />
@@ -101,12 +80,13 @@ export default function UploadData() {
           </TabsTrigger>
         </TabsList>
 
+        {/* UPLOAD CARD */}
         <TabsContent value={activeTab} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Upload {activeTab === "employees" ? "Employee Resume" : activeTab === "jds" ? "Job Description" : "Activity"} Data</CardTitle>
+              <CardTitle>Upload {activeTab === "employees" ? "Employee" : activeTab === "jds" ? "Job Description" : "Activity"} Data</CardTitle>
               <CardDescription>
-                {activeTab === "employees" ? "Upload a PDF resume. The AI will parse it and extract your skills." : "Upload a file to process."}
+                Upload a CSV or Excel file. First few rows will be previewed before confirmation.
               </CardDescription>
             </CardHeader>
 
@@ -115,7 +95,7 @@ export default function UploadData() {
                 <Label>Select File</Label>
                 <Input
                   type="file"
-                  accept={activeTab === "employees" ? ".pdf,.doc,.docx,.txt" : ".csv,.xlsx"}
+                  accept=".csv,.xlsx"
                   onChange={handleFileSelect}
                 />
                 {file && (
@@ -151,8 +131,11 @@ export default function UploadData() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <CardTitle>File Staged</CardTitle>
+                  <CardTitle>Preview (First Rows)</CardTitle>
                 </div>
+                <CardDescription>
+                  This is a preview only. Full data will be processed after upload.
+                </CardDescription>
               </CardHeader>
 
               <CardContent>
@@ -160,10 +143,10 @@ export default function UploadData() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>File Name</TableHead>
-                        <TableHead>Size</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Action</TableHead>
+                        <TableHead>Column 1</TableHead>
+                        <TableHead>Column 2</TableHead>
+                        <TableHead>Column 3</TableHead>
+                        <TableHead>Column 4</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

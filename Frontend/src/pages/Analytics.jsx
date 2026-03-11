@@ -1,4 +1,3 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +10,7 @@ import {
   Building2,
   BarChart3,
 } from "lucide-react";
+import { employees as centralEmployees } from "@/data/mockEmployeeData";
 import { getWorkforceKPIs } from "@/lib/workforce-utils";
 
 import { WorkDistributionChart } from "@/components/WorkDistributionChart";
@@ -18,16 +18,13 @@ import { ProductivityChart } from "@/components/ProductivityChart";
 import { FitmentScoreChart } from "@/components/FitmentScoreChart";
 
 export default function Analytics() {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
   const kpis = useMemo(() => getWorkforceKPIs(), []);
 
   const stats = useMemo(() => {
-    const total = employees.length;
-    const avgProd = employees.reduce((sum, e) => sum + e.scores.productivity, 0) / total;
-    const avgUtil = employees.reduce((sum, e) => sum + e.scores.utilization, 0) / total;
-    const highPerformers = employees.filter(e => e.scores.productivity > 85).length;
+    const total = centralEmployees.length;
+    const avgProd = centralEmployees.reduce((sum, e) => sum + e.scores.productivity, 0) / total;
+    const avgUtil = centralEmployees.reduce((sum, e) => sum + e.scores.utilization, 0) / total;
+    const highPerformers = centralEmployees.filter(e => e.scores.productivity > 85).length;
 
     return {
       totalEmployees: total,
@@ -38,7 +35,7 @@ export default function Analytics() {
   }, []);
 
   const departmentCount = useMemo(() => {
-    return new Set(employees.map(e => e.department).filter(Boolean)).size;
+    return new Set(centralEmployees.map(e => e.department).filter(Boolean)).size;
   }, []);
 
   const productivityHealth =
@@ -52,7 +49,7 @@ export default function Analytics() {
       <div>
         <h1 className="text-4xl font-extrabold tracking-tight">Analytics</h1>
         <p className="text-muted-foreground mt-2 text-lg">
-          Deep workforce insights, trends, and performance analysis from {employees.length} active nodes.
+          Deep workforce insights, trends, and performance analysis from {centralEmployees.length} active nodes.
         </p>
       </div>
 
@@ -142,7 +139,7 @@ export default function Analytics() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-slate-500">
           <p>• Cross-department productivity variance is currently under ±5%, indicating high standardization.</p>
-          <p>• Fitment analysis suggests a potential reskilling opportunity in {employees[0].department} nodes.</p>
+          <p>• Fitment analysis suggests a potential reskilling opportunity in {centralEmployees[0].department} nodes.</p>
           <p>• Real-time utilization monitoring enables dynamic workforce reallocation.</p>
         </CardContent>
       </Card>

@@ -15,4 +15,8 @@ router.post('/upload-resume', [auth, upload.single('resume')], employeeControlle
 // @access  Private
 router.get('/', [auth, authorize('admin', 'manager', 'hr', 'employee')], employeeController.getEmployees);
 
+// @route   POST api/employees/update-data
+// @access  Private
+router.post('/update-data', [auth, authorize('employee')], employeeController.updateEmployeeData);
+
 module.exports = router;

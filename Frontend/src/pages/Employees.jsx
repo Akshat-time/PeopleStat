@@ -1,4 +1,3 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
@@ -32,13 +31,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 
 import EmployeeDrawer from "@/components/EmployeeDrawer";
+import { employees as centralEmployees, getOverallRisk, getFitmentBand } from "@/data/mockEmployeeData";
 import { getWorkforceKPIs, getAISignals } from "@/lib/workforce-utils";
 
 // ---------------- PAGE ----------------
 export default function Employees() {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -108,7 +105,7 @@ export default function Employees() {
     const params = new URLSearchParams(window.location.search);
     const isFatigueRisk = params.get("risk") === "fatigue";
 
-    return employees.filter((e) => {
+    return centralEmployees.filter((e) => {
       const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
         e.employeeId.toLowerCase().includes(search.toLowerCase());
       const matchesDept = !filters.department || e.department === filters.department;
@@ -143,7 +140,7 @@ export default function Employees() {
   const handleExport = () => {
     const csvContent = "data:text/csv;charset=utf-8," +
       "Name,Email,Position,Department,Fitment Score,Productivity,Utilization,Salary\n" +
-      employees.map(emp =>
+      centralEmployees.map(emp =>
         `${emp.name},${emp.email},${emp.position},${emp.department},${emp.scores.fitment},${emp.scores.productivity},${emp.scores.utilization},${emp.salary}`
       ).join("\n");
 
@@ -421,7 +418,7 @@ export default function Employees() {
             <Card className="p-4 bg-white border-[#E5E7EB] rounded-xl shadow-sm">
               <h3 className="font-semibold text-[#0F172A] mb-4">Top 3 At-Risk Employees</h3>
               <div className="space-y-3">
-                {[...employees]
+                {[...centralEmployees]
                   .sort((a, b) => b.scores.fatigue - a.scores.fatigue)
                   .slice(0, 3)
                   .map(emp => (
@@ -441,7 +438,7 @@ export default function Employees() {
             <Card className="p-4 bg-green-50 border border-green-200 rounded-xl shadow-sm">
               <h3 className="font-semibold text-[#0F172A] mb-3">Promotion-Ready</h3>
               <div className="space-y-2 mb-4">
-                {employees
+                {centralEmployees
                   .filter(e => e.scores.fitment >= 85)
                   .slice(0, 2)
                   .map(emp => (
@@ -541,7 +538,7 @@ export default function Employees() {
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => {
-                  setSelectedEmployee(employees.find(emp => emp.name === selectedAtRiskEmployee?.name));
+                  setSelectedEmployee(centralEmployees.find(emp => emp.name === selectedAtRiskEmployee?.name));
                   setSelectedAtRiskEmployee(null);
                 }}>
                   View Full Profile

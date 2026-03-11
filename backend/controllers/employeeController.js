@@ -33,8 +33,50 @@ exports.uploadResume = async (req, res) => {
 
 exports.getEmployees = async (req, res) => {
   try {
-    const data = await Employee.find().populate('userId', 'username email role');
+    const { email } = req.query;
+    let query = {};
+    
+    if (email) {
+      const User = require('../models/User');
+      const user = await User.findOne({ email });
+      if (user) {
+        query = { userId: user._id };
+      } else {
+        return res.json({ success: true, data: [] });
+      }
+    }
+
+    const data = await Employee.find(query).populate('userId', 'username email role');
     res.json({ success: true, data });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+exports.updateEmployeeData = async (req, res) => {
+  try {
+    const { employeeMaster, processCharacteristics, experienceCompensation, fitmentResponses, workingHours } = req.body;
+    
+    let employee = await Employee.findOne({ userId: req.user.id });
+    
+    if (!employee) {
+      employee = new Employee({ userId: req.user.id });
+    }
+
+    // Update fields
+    if (employeeMaster) employee.employeeMaster = employeeMaster;
+    if (processCharacteristics) employee.processCharacteristics = processCharacteristics;
+    if (experienceCompensation) employee.experienceCompensation = experienceCompensation;
+    if (fitmentResponses) employee.fitmentResponses = fitmentResponses;
+    if (workingHours) employee.workingHours = workingHours;
+
+    // Optional: sync some fields to the root for easier querying
+    if (employeeMaster?.department) employee.department = employeeMaster.department;
+
+    await employee.save();
+
+    res.json({ success: true, data: employee });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ success: false, error: 'Server Error' });

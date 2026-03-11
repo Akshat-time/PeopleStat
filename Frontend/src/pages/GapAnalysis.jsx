@@ -1,4 +1,3 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import React, { useState, useMemo } from "react";
 import {
   Card,
@@ -29,18 +28,16 @@ import {
   Search,
   Download,
 } from "lucide-react";
+import { employees as centralEmployees, getFitmentBand } from "@/data/mockEmployeeData";
 
 /* ---------------- COMPONENT ---------------- */
 
 export default function GapAnalysis() {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
   const employeesWithGaps = useMemo(() => {
-    return employees.filter(e => e.scores.fitment < 85).map(e => {
+    return centralEmployees.filter(e => e.scores.fitment < 85).map(e => {
       let severity = "Low";
       let gapCount = 1;
       if (e.scores.fitment < 50) {
@@ -95,7 +92,7 @@ export default function GapAnalysis() {
         <div>
           <h1 className="text-3xl font-bold">Gap Analysis</h1>
           <p className="text-muted-foreground">
-            Skill, performance & development gaps across {employees.length} employees
+            Skill, performance & development gaps across {centralEmployees.length} employees
           </p>
         </div>
 

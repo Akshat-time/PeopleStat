@@ -1,14 +1,11 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import { X, Brain, Wrench, AlertTriangle, ShieldCheck, Zap, Target, TrendingUp, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from "recharts";
+import { getOverallRisk, getFitmentBand } from "@/data/mockEmployeeData";
 import { useToast } from "@/hooks/use-toast";
 
 export default function EmployeeDrawer({ employee, onClose }) {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
   const { toast } = useToast();
   if (!employee) return null;
 

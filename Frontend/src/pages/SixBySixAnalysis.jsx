@@ -1,10 +1,10 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import React, { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Brain, Users, AlertTriangle, TrendingUp, ArrowRight, GraduationCap, UserX, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { employees as centralEmployees, getOverallRisk } from "@/data/mockEmployeeData";
 
 /* ----------------------- MATRIX DEFINITIONS ----------------------- */
 
@@ -56,13 +56,10 @@ function aiRecommendation(e) {
 /* ----------------------- COMPONENT ----------------------- */
 
 export default function SixBySixAnalysis() {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
   const [selected, setSelected] = useState(null);
 
   const enriched = useMemo(() => {
-    return employees.map(e => ({
+    return centralEmployees.map(e => ({
       ...e,
       "Business Criticality": Math.round(getBusinessCriticality(e)),
     }));
@@ -90,12 +87,12 @@ export default function SixBySixAnalysis() {
   }, [enriched]);
 
   const kpis = useMemo(() => {
-    const highRisk = employees.filter(e => getOverallRisk(e) === "High").length;
-    const totalCost = employees.reduce((sum, e) => sum + e.salary, 0);
-    const costAtRisk = employees
+    const highRisk = centralEmployees.filter(e => getOverallRisk(e) === "High").length;
+    const totalCost = centralEmployees.reduce((sum, e) => sum + e.salary, 0);
+    const costAtRisk = centralEmployees
       .filter(e => getOverallRisk(e) === "High")
       .reduce((sum, e) => sum + e.salary, 0);
-    const avgAutomation = employees.reduce((sum, e) => sum + e.scores.automationPotential, 0) / employees.length;
+    const avgAutomation = centralEmployees.reduce((sum, e) => sum + e.scores.automationPotential, 0) / centralEmployees.length;
 
     return {
       riskCount: highRisk,
@@ -111,7 +108,7 @@ export default function SixBySixAnalysis() {
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold text-slate-800 tracking-tight">6×6 Workforce Intelligence Matrix</h1>
-        <p className="text-slate-500 mt-1">AI-driven segmentation of risk, fitment and performance across {employees.length} nodes</p>
+        <p className="text-slate-500 mt-1">AI-driven segmentation of risk, fitment and performance across {centralEmployees.length} nodes</p>
       </div>
 
       {/* KPI STRIP */}

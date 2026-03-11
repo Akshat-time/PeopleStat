@@ -1,4 +1,3 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,16 +9,14 @@ import {
   ArrowUpRight,
   ShieldCheck,
 } from "lucide-react";
+import { employees as centralEmployees } from "@/data/mockEmployeeData";
 
 /* =================== COMPONENT =================== */
 export default function Optimization() {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
   const recommendations = useMemo(() => {
-    const fatigueRiskEmps = employees.filter(e => e.scores.fatigue > 80);
-    const skillGapEmps = employees.filter(e => e.scores.fitment < 65);
-    const overfitEmps = employees.filter(e => e.scores.fitment > 90 && e.scores.utilization < 75);
+    const fatigueRiskEmps = centralEmployees.filter(e => e.scores.fatigue > 80);
+    const skillGapEmps = centralEmployees.filter(e => e.scores.fitment < 65);
+    const overfitEmps = centralEmployees.filter(e => e.scores.fitment > 90 && e.scores.utilization < 75);
 
     return [
       {
@@ -91,7 +88,7 @@ export default function Optimization() {
           Optimization Recommendations
         </h1>
         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-          AI-driven workforce actions to reduce cost, risk, and inefficiencies based on current {employees.length} employee records
+          AI-driven workforce actions to reduce cost, risk, and inefficiencies based on current {centralEmployees.length} employee records
         </p>
       </div>
 

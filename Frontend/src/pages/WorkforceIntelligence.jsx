@@ -1,4 +1,3 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,23 +54,21 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { employees as centralEmployees } from "@/data/mockEmployeeData";
 
 export default function WorkforceIntelligence() {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [activeSheet, setActiveSheet] = useState(null); // 'workforce', 'performance', 'utilization', 'salary'
   const [activeDialog, setActiveDialog] = useState(null); // 'skill-gap', 'productivity'
 
   const kpiMetrics = useMemo(() => {
-    const avgPerf = employees.reduce((sum, e) => sum + e.scores.productivity, 0) / employees.length;
+    const avgPerf = centralEmployees.reduce((sum, e) => sum + e.scores.productivity, 0) / centralEmployees.length;
     return [
       {
         id: "workforce",
         title: "Total Workforce",
-        value: employees.length.toLocaleString(),
+        value: centralEmployees.length.toLocaleString(),
         change: "+2.4%",
         changeType: "up",
         icon: Users,
@@ -89,7 +86,7 @@ export default function WorkforceIntelligence() {
       {
         id: "utilization",
         title: "Utilization Rate",
-        value: `${(employees.reduce((sum, e) => sum + e.scores.utilization, 0) / employees.length).toFixed(1)}%`,
+        value: `${(centralEmployees.reduce((sum, e) => sum + e.scores.utilization, 0) / centralEmployees.length).toFixed(1)}%`,
         change: "+12.8%",
         changeType: "up",
         icon: Activity,
@@ -98,7 +95,7 @@ export default function WorkforceIntelligence() {
       {
         id: "salary",
         title: "Salary Asset Value",
-        value: `$${(employees.reduce((sum, e) => sum + e.salary, 0) / 1000000).toFixed(1)}M`,
+        value: `$${(centralEmployees.reduce((sum, e) => sum + e.salary, 0) / 1000000).toFixed(1)}M`,
         change: "+8.3%",
         changeType: "up",
         icon: DollarSign,
@@ -108,9 +105,9 @@ export default function WorkforceIntelligence() {
   }, []);
 
   const departmentOverview = useMemo(() => {
-    const depts = [...new Set(employees.map(e => e.department))];
+    const depts = [...new Set(centralEmployees.map(e => e.department))];
     return depts.map(dept => {
-      const emps = employees.filter(e => e.department === dept);
+      const emps = centralEmployees.filter(e => e.department === dept);
       const perf = Math.round(emps.reduce((sum, e) => sum + e.scores.productivity, 0) / emps.length);
       const utils = Math.round(emps.reduce((sum, e) => sum + e.scores.utilization, 0) / emps.length);
       const salary = emps.reduce((sum, e) => sum + e.salary, 0);
@@ -127,9 +124,9 @@ export default function WorkforceIntelligence() {
   }, []);
 
   const predictiveInsights = useMemo(() => {
-    const attrRisk = employees.filter(e => e.scores.fatigue > 85).length;
-    const promoReady = employees.filter(e => e.scores.fitment > 90 && e.scores.productivity > 85).length;
-    const trainingNeeds = employees.filter(e => e.scores.fitment < 70).length;
+    const attrRisk = centralEmployees.filter(e => e.scores.fatigue > 85).length;
+    const promoReady = centralEmployees.filter(e => e.scores.fitment > 90 && e.scores.productivity > 85).length;
+    const trainingNeeds = centralEmployees.filter(e => e.scores.fitment < 70).length;
 
     return [
       {
@@ -423,7 +420,7 @@ export default function WorkforceIntelligence() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employees.map(e => (
+                  {centralEmployees.map(e => (
                     <TableRow key={e.employeeId}>
                       <TableCell className="font-medium">{e.name}</TableCell>
                       <TableCell>{e.department}</TableCell>
@@ -463,7 +460,7 @@ export default function WorkforceIntelligence() {
                     Overloaded Employees (&gt;90%)
                   </h4>
                   <div className="space-y-2">
-                    {employees.filter(e => e.scores.utilization > 90).map(e => (
+                    {centralEmployees.filter(e => e.scores.utilization > 90).map(e => (
                       <div key={e.employeeId} className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
                         <span className="text-sm font-medium">{e.name}</span>
                         <Badge variant="destructive">{e.scores.utilization}%</Badge>
@@ -477,7 +474,7 @@ export default function WorkforceIntelligence() {
                     Underutilized Potential (&lt;60%)
                   </h4>
                   <div className="space-y-2">
-                    {employees.filter(e => e.scores.utilization < 60).map(e => (
+                    {centralEmployees.filter(e => e.scores.utilization < 60).map(e => (
                       <div key={e.employeeId} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                         <span className="text-sm font-medium">{e.name}</span>
                         <Badge variant="secondary" className="bg-blue-100 text-blue-800">{e.scores.utilization}%</Badge>
@@ -537,7 +534,7 @@ export default function WorkforceIntelligence() {
             {activeDialog === 'skill-gap' && (
               <div className="space-y-3">
                 <p className="text-sm text-slate-600">The following employees require immediate skills intervention:</p>
-                {employees.filter(e => e.scores.fitment < 70).map(e => (
+                {centralEmployees.filter(e => e.scores.fitment < 70).map(e => (
                   <div key={e.employeeId} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 cursor-pointer" onClick={() => navigate("/fitment")}>
                     <div>
                       <p className="font-medium text-sm">{e.name}</p>
@@ -584,7 +581,7 @@ export default function WorkforceIntelligence() {
                     </div>
                   </div>
                 </div>
-                {employees.filter(e => e.scores.fatigue > 85).map(e => (
+                {centralEmployees.filter(e => e.scores.fatigue > 85).map(e => (
                   <div key={e.employeeId} className="flex justify-between items-center p-3 border rounded-lg">
                     <div>
                       <p className="font-medium text-sm">{e.name}</p>
@@ -603,7 +600,7 @@ export default function WorkforceIntelligence() {
             {activeDialog === 'promotion' && (
               <div className="space-y-3">
                 <p className="text-sm text-slate-600">High-potential employees ready for internal mobility:</p>
-                {employees.filter(e => e.scores.fitment > 90 && e.scores.productivity > 85).map(e => (
+                {centralEmployees.filter(e => e.scores.fitment > 90 && e.scores.productivity > 85).map(e => (
                   <div key={e.employeeId} className="flex gap-4 items-center p-3 border rounded-lg bg-green-50/30">
                     <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">
                       {e.name[0]}

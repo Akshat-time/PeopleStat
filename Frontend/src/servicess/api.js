@@ -1,24 +1,11 @@
 import axios from "axios";
 
-const API_BASE_URL = "/api";
+const API_BASE_URL = "http://localhost:5001/api"; // backend team will confirm later
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
 });
-
-// Automatically attach JWT token to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Named and default exports so both import styles work
-export { api };
-export default api;
 
 // Admin APIs
 export const fetchEmployees = () => api.get("/employees");

@@ -1,449 +1,212 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useMemo } from "react";
-import { Settings as SettingsIcon, Upload, Save, MapPin, Users, Database, Building2, Target, CheckCircle } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { 
+  User, Lock, Bell, Moon, Sun, Shield, 
+  Eye, EyeOff, Loader2, Save, LogOut 
+} from "lucide-react";
 
 export default function Settings() {
-  const { employees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!employees) return <div>Loading workforce data...</div>;
-
+  const { user, logout } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("map");
-  const [newDepartmentName, setNewDepartmentName] = useState("");
-  const [targetUnit, setTargetUnit] = useState("");
-  const [teamIdentifier, setTeamIdentifier] = useState("");
-  const [burnoutCritical, setBurnoutCritical] = useState(85);
-  const [competencyDelta, setCompetencyDelta] = useState(15);
-  const [utilizationYield, setUtilizationYield] = useState(92);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock teams data
-  const teams = {
-    "Finance": ["Core Finance", "Budget Planning", "Audit Team"],
-    "IT": ["Development", "Infrastructure", "Security"],
+  // Profile Settings
+  const [profileData, setProfileData] = useState({
+    username: user?.username || "",
+    email: user?.email || "",
+  });
+
+  // Password Settings
+  const [passwords, setPasswords] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+  const [showPass, setShowPass] = useState(false);
+
+  // Preference Settings
+  const [prefs, setPrefs] = useState({
+    emailNotifications: true,
+    pushNotifications: false,
+    darkMode: localStorage.getItem("theme") === "dark",
+    twoFactor: false,
+  });
+
+  const handleProfileSave = async () => {
+    setIsLoading(true);
+    try {
+      await api.post("/user/update-profile", { username: profileData.username });
+      toast({ title: "Profile Updated", description: "Your basic info has been saved." });
+    } catch (err) {
+      toast({ title: "Update Failed", description: err.response?.data?.message || "Could not save profile change", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Derive departments from employees
-  const departments = useMemo(() => {
-    return employees.reduce((acc, emp) => {
-      if (!acc[emp.department]) {
-        acc[emp.department] = [];
-      }
-      acc[emp.department].push(emp);
-      return acc;
-    }, {});
-  }, []);
-
-  // Calculate department metrics
-  const getDepartmentMetrics = (deptEmployees) => {
-    const totalEmployees = deptEmployees.length;
-    const avgFitment = deptEmployees.reduce((sum, emp) => sum + emp.scores.fitment, 0) / totalEmployees;
-    const avgUtilization = deptEmployees.reduce((sum, emp) => sum + emp.scores.utilization, 0) / totalEmployees;
-    const fte = deptEmployees.reduce((sum, emp) => sum + (emp.processes?.reduce((pSum, p) => pSum + p.hours, 0) || 0) / 160, 0);
-    return {
-      totalEmployees,
-      avgFitment: avgFitment.toFixed(1),
-      avgUtilization: avgUtilization.toFixed(1),
-      fte: fte.toFixed(1)
-    };
-  };
-
-  const handleInitializeUnit = () => {
-    if (!newDepartmentName.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a department name",
-        variant: "destructive",
-      });
+  const handlePasswordChange = async () => {
+    if (!passwords.current || !passwords.new) {
+       toast({ title: "Missing Fields", description: "All password fields are required", variant: "destructive" });
+       return;
+    }
+    if (passwords.new !== passwords.confirm) {
+      toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
       return;
     }
-    toast({
-      title: "Unit Initialized",
-      description: `New strategic unit "${newDepartmentName}" has been initialized.`,
-    });
-    setNewDepartmentName("");
-  };
-
-  const handleConfirmMap = () => {
-    if (!targetUnit || !teamIdentifier.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a target unit and enter team identifier",
-        variant: "destructive",
+    setIsLoading(true);
+    try {
+      await api.post("/user/change-password", { 
+        currentPassword: passwords.current, 
+        newPassword: passwords.new 
       });
-      return;
+      toast({ title: "Password Changed", description: "Your security credentials have been updated." });
+      setPasswords({ current: "", new: "", confirm: "" });
+    } catch (err) {
+      toast({ title: "Error", description: err.response?.data?.message || "Failed to change password", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-    toast({
-      title: "Mapping Confirmed",
-      description: `Team "${teamIdentifier}" mapped to ${targetUnit}.`,
-    });
-    setTargetUnit("");
-    setTeamIdentifier("");
   };
 
-  const handleLaunchPipeline = () => {
-    toast({
-      title: "Intelligence Pipeline Launched",
-      description: "Mass data ingestion pipeline has been initiated.",
-    });
-  };
-
-  const handleUpdateLogic = () => {
-    toast({
-      title: "System Logic Updated",
-      description: "Logic thresholds have been updated successfully.",
-    });
-  };
-
-  const handleEmployeeCommit = (employeeId) => {
-    toast({
-      title: "Mapping Updated",
-      description: `Employee ${employeeId} mapping has been committed.`,
-    });
+  const toggleTheme = (val) => {
+    setPrefs({ ...prefs, darkMode: val });
+    const theme = val ? "dark" : "light";
+    localStorage.setItem("theme", theme);
+    document.documentElement.classList.toggle("dark", val);
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Left Side */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <SettingsIcon className="h-6 w-6 text-primary" />
-                <span className="text-sm font-medium text-muted-foreground">GOVERNANCE HUB</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">System Configuration</h1>
-                <p className="text-sm text-muted-foreground">ENTERPRISE ARCHITECTURE & LOGIC MAPPING</p>
-              </div>
-            </div>
-
-            {/* Right Side - Tabs */}
-            <div className="flex gap-2">
-              <Button
-                variant={activeTab === "map" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveTab("map")}
-                className="rounded-full"
-              >
-                Organization Map
-              </Button>
-              <Button
-                variant={activeTab === "allotment" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveTab("allotment")}
-                className="rounded-full"
-              >
-                Workforce Allotment
-              </Button>
-              <Button
-                variant={activeTab === "processing" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveTab("processing")}
-                className="rounded-full"
-              >
-                Data Processing
-              </Button>
-            </div>
-          </div>
-        </div>
+    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Account Settings</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your account preferences and security</p>
       </div>
 
-      {/* Content */}
-      <div className="container mx-auto px-6 py-6">
-        {activeTab === "map" && (
-          <div className="grid grid-cols-12 gap-6">
-            {/* Left Sidebar */}
-            <div className="col-span-4 space-y-6">
-              {/* Global Hierarchy Health */}
-              <Card className="bg-slate-900 text-white">
-                <CardHeader>
-                  <CardTitle className="text-lg">Global Hierarchy Health</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Operational Units</span>
-                    <span className="font-bold text-xl">{Object.keys(departments).length}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Active Teams</span>
-                    <span className="font-bold text-xl">{Object.values(teams).flat().length}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Mapping Integrity</span>
-                    <span className="font-bold text-xl text-green-400">98%</span>
-                  </div>
-                </CardContent>
-              </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Navigation Sidebar (Mobile View could use tabs) */}
+        <div className="space-y-2">
+           {[
+             { id: 'profile', label: 'Profile Settings', icon: User },
+             { id: 'security', label: 'Security & Password', icon: Lock },
+             { id: 'notifications', label: 'Notifications', icon: Bell },
+             { id: 'appearance', label: 'Appearance', icon: Moon },
+           ].map(item => (
+             <Button key={item.id} variant="ghost" className="w-full justify-start font-semibold text-slate-600 dark:text-slate-300">
+               <item.icon className="h-4 w-4 mr-2" />
+               {item.label}
+             </Button>
+           ))}
+           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+             <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" onClick={logout}>
+               <LogOut className="h-4 w-4 mr-2" />
+               Sign Out
+             </Button>
+           </div>
+        </div>
 
-              {/* New Strategic Unit */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">New Strategic Unit</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="department-name">Department Name</Label>
-                    <Input
-                      id="department-name"
-                      value={newDepartmentName}
-                      onChange={(e) => setNewDepartmentName(e.target.value)}
-                      placeholder="Enter department name"
-                    />
-                  </div>
-                  <Button onClick={handleInitializeUnit} className="w-full">
-                    INITIALIZE UNIT
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Team Topology */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Team Topology</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="target-unit">Target Unit</Label>
-                    <Select value={targetUnit} onValueChange={setTargetUnit}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select target unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(departments).map((dept) => (
-                          <SelectItem key={dept} value={dept}>
-                            {dept}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="team-identifier">Team Identifier</Label>
-                    <Input
-                      id="team-identifier"
-                      value={teamIdentifier}
-                      onChange={(e) => setTeamIdentifier(e.target.value)}
-                      placeholder="Enter team identifier"
-                    />
-                  </div>
-                  <Button onClick={handleConfirmMap} className="w-full">
-                    CONFIRM MAP
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Main Grid */}
-            <div className="col-span-8">
-              <div className="grid grid-cols-2 gap-6">
-                {Object.entries(departments).map(([deptName, deptEmployees]) => {
-                  const metrics = getDepartmentMetrics(deptEmployees);
-                  const deptTeams = teams[deptName] || [];
-                  return (
-                    <Card key={deptName} className="p-6">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold">{deptName}</h3>
-                          <Badge variant="outline">DEPT-{deptName.toUpperCase().slice(0, 4)}</Badge>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">FTE Count</p>
-                            <p className="text-2xl font-bold">{metrics.fte}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Avg Fitment %</p>
-                            <p className="text-2xl font-bold">{metrics.avgFitment}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Utilization %</p>
-                            <p className="text-2xl font-bold">{metrics.avgUtilization}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Active Nodes</p>
-                            <p className="text-2xl font-bold">{deptTeams.length}</p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">Active Team Nodes</p>
-                          <div className="flex flex-wrap gap-1">
-                            {deptTeams.length > 0 ? (
-                              deptTeams.map((team) => (
-                                <Badge key={team} variant="secondary" className="text-xs">
-                                  {team}
-                                </Badge>
-                              ))
-                            ) : (
-                              <div className="border-2 border-dashed border-muted-foreground/25 rounded px-3 py-1 text-xs text-muted-foreground">
-                                NO LOGICAL TEAMS MAPPED
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
+        {/* Settings Content */}
+        <div className="md:col-span-2 space-y-6">
+          
+          {/* Section: Profile */}
+          <Card id="profile" className="border-slate-200 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="text-lg">Profile Details</CardTitle>
+              <CardDescription>Update your public information</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Username</Label>
+                  <Input value={profileData.username} onChange={e => setProfileData({...profileData, username: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input value={profileData.email} disabled className="bg-slate-50" />
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+              <Button onClick={handleProfileSave} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Save Changes
+              </Button>
+            </CardContent>
+          </Card>
 
-        {activeTab === "allotment" && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold">Workforce Allotment Engine</h2>
-              <p className="text-muted-foreground">Synchronize workforce assets with operational topology</p>
-            </div>
-
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b">
-                      <tr>
-                        <th className="text-left p-4 font-medium">Operational Asset</th>
-                        <th className="text-left p-4 font-medium">Current Mapping</th>
-                        <th className="text-left p-4 font-medium">Target Unit</th>
-                        <th className="text-left p-4 font-medium">Target Node</th>
-                        <th className="text-left p-4 font-medium">Commit</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {employees.map((employee) => (
-                        <tr key={employee.employeeId} className="border-b">
-                          <td className="p-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-medium">
-                                {employee.name.split(' ').map(n => n[0]).join('')}
-                              </div>
-                              <div>
-                                <p className="font-medium">{employee.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {employee.employeeId} • {employee.position}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <Badge variant="outline">{employee.department}</Badge>
-                          </td>
-                          <td className="p-4">
-                            <Select>
-                              <SelectTrigger className="w-32">
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.keys(departments).map((dept) => (
-                                  <SelectItem key={dept} value={dept}>
-                                    {dept}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className="p-4">
-                            <Select>
-                              <SelectTrigger className="w-32">
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.values(teams).flat().map((team) => (
-                                  <SelectItem key={team} value={team}>
-                                    {team}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className="p-4">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEmployeeCommit(employee.employeeId)}
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {/* Section: Security */}
+          <Card id="security" className="border-slate-200 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5 text-blue-500" /> Password & Security</CardTitle>
+              <CardDescription>Keep your account protected with a strong password</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Current Password</Label>
+                <div className="relative">
+                  <Input type={showPass ? "text" : "password"} value={passwords.current} onChange={e => setPasswords({...passwords, current: e.target.value})} />
+                  <button className="absolute right-3 top-2.5 text-slate-400" onClick={() => setShowPass(!showPass)}>
+                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === "processing" && (
-          <div className="grid grid-cols-2 gap-6">
-            {/* Left Card - Mass Data Ingestion */}
-            <Card>
-              <CardContent className="p-8 text-center space-y-4">
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8">
-                  <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Mass Data Ingestion</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Upload CSV, JSON, or XLS files to bulk import employee data,
-                    organizational structures, and performance metrics
-                  </p>
-                  <Button onClick={handleLaunchPipeline}>
-                    LAUNCH INTELLIGENCE PIPELINE
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Right Card - Logic Thresholds */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Logic Thresholds</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="burnout-critical">Burnout Critical Level (%)</Label>
-                  <Input
-                    id="burnout-critical"
-                    type="number"
-                    value={burnoutCritical}
-                    onChange={(e) => setBurnoutCritical(parseInt(e.target.value))}
-                  />
+                  <Label>New Password</Label>
+                  <Input type="password" value={passwords.new} onChange={e => setPasswords({...passwords, new: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="competency-delta">Competency Delta Gap (%)</Label>
-                  <Input
-                    id="competency-delta"
-                    type="number"
-                    value={competencyDelta}
-                    onChange={(e) => setCompetencyDelta(parseInt(e.target.value))}
-                  />
+                  <Label>Confirm New Password</Label>
+                  <Input type="password" value={passwords.confirm} onChange={e => setPasswords({...passwords, confirm: e.target.value})} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="utilization-yield">Utilization Yield Target (%)</Label>
-                  <Input
-                    id="utilization-yield"
-                    type="number"
-                    value={utilizationYield}
-                    onChange={(e) => setUtilizationYield(parseInt(e.target.value))}
-                  />
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800 mt-4">
+                <div className="space-y-0.5">
+                  <Label>Two-Factor Authentication</Label>
+                  <p className="text-xs text-muted-foreground">Add an extra layer of security</p>
                 </div>
-                <Button onClick={handleUpdateLogic} className="w-full">
-                  UPDATE SYSTEM LOGIC
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                <Switch checked={prefs.twoFactor} onCheckedChange={(v) => setPrefs({...prefs, twoFactor: v})} />
+              </div>
+              <Button onClick={handlePasswordChange} disabled={isLoading} className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900">
+                 Change Password
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Section: Preferences */}
+          <Card className="border-slate-200 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="text-lg">System Preferences</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-slate-400" />
+                    <Label>Email Notifications</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Receive weekly performance summaries</p>
+                </div>
+                <Switch checked={prefs.emailNotifications} onCheckedChange={(v) => setPrefs({...prefs, emailNotifications: v})} />
+              </div>
+              
+              <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    {prefs.darkMode ? <Moon className="h-4 w-4 text-blue-400" /> : <Sun className="h-4 w-4 text-amber-500" />}
+                    <Label>Dark Mode</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Switch to a darker experimental theme</p>
+                </div>
+                <Switch checked={prefs.darkMode} onCheckedChange={toggleTheme} />
+              </div>
+            </CardContent>
+          </Card>
+
+        </div>
       </div>
     </div>
   );

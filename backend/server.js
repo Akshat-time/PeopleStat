@@ -39,6 +39,7 @@ app.get('/', (req, res) => res.send('API Running securely'));
 
 // Define Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/user', require('./routes/user'));
 app.use('/api/employees', require('./routes/employees'));
 app.use('/api/assessments', require('./routes/assessments'));
 app.use('/api/analytics', require('./routes/analytics'));

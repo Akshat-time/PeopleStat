@@ -1,4 +1,3 @@
-import { useWorkforceData } from "@/contexts/WorkforceContext";
 import React, { useState, useMemo } from "react";
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
@@ -10,21 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { employees as initialEmployees, getFitmentBand } from "@/data/mockEmployeeData";
 import { useAuth } from "@/lib/auth";
 
 export default function FitmentAnalysis() {
-  const { employees: allEmployees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
-  if (!allEmployees) return <div>Loading workforce data...</div>;
-
   const { user } = useAuth();
   const isEmployee = user?.role === "employee";
 
-  const employees = useMemo(() => {
+  const centralEmployees = useMemo(() => {
     if (isEmployee) {
-      return allEmployees.filter(e => e.employeeId === user.employeeId);
+      return initialEmployees.filter(e => e.employeeId === user.employeeId);
     }
-    return allEmployees;
-  }, [isEmployee, user, allEmployees]);
+    return initialEmployees;
+  }, [isEmployee, user]);
 
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -39,7 +36,7 @@ export default function FitmentAnalysis() {
 
   const distribution = useMemo(() => {
     const counts = { "Unfit": 0, "Train-to-Fit": 0, "Fit": 0, "Overfit": 0 };
-    employees.forEach(e => {
+    centralEmployees.forEach(e => {
       counts[getFitmentBand(e.scores.fitment)]++;
     });
     return [
@@ -53,8 +50,8 @@ export default function FitmentAnalysis() {
   const kpiData = useMemo(() => {
     const fitPlusOver = distribution.filter(d => d.name === "Fit" || d.name === "Overfit").reduce((a, b) => a + b.value, 0);
     const misalignedCount = distribution.filter(d => d.name === "Unfit" || d.name === "Train-to-Fit").reduce((a, b) => a + b.value, 0);
-    const percentFit = (fitPlusOver / employees.length * 100).toFixed(1);
-    const costAtRisk = employees.filter(e => e.scores.fitment < 70).reduce((sum, e) => sum + (e.salary || 0), 0);
+    const percentFit = centralEmployees.length > 0 ? (fitPlusOver / centralEmployees.length * 100).toFixed(1) : "0.0";
+    const costAtRisk = centralEmployees.filter(e => e.scores.fitment < 70).reduce((sum, e) => sum + e.salary, 0);
 
     return [
       { title: "WORKFORCE FITMENT", value: `${percentFit}%`, subtitle: "Fit + Overfit Combined", trend: "+2.1%", trendUp: true, color: "from-blue-500 to-blue-600" },
@@ -65,7 +62,7 @@ export default function FitmentAnalysis() {
   }, [distribution]);
 
   const scatterData = useMemo(() => {
-    return employees.map(e => ({
+    return centralEmployees.map(e => ({
       name: e.name,
       fitment: e.scores.fitment,
       productivity: e.scores.productivity,
@@ -74,9 +71,9 @@ export default function FitmentAnalysis() {
   }, []);
 
   const processRisks = useMemo(() => {
-    const depts = [...new Set(employees.map(e => e.department))];
+    const depts = [...new Set(centralEmployees.map(e => e.department))];
     return depts.map(dept => {
-      const emps = employees.filter(e => e.department === dept);
+      const emps = centralEmployees.filter(e => e.department === dept);
       const unfit = emps.filter(e => e.scores.fitment < 70).length;
       const riskPercent = Math.round((unfit / emps.length) * 100);
       return {
@@ -90,7 +87,7 @@ export default function FitmentAnalysis() {
   }, []);
 
   const filteredEmployees = useMemo(() => {
-    return employees.filter(emp => {
+    return centralEmployees.filter(emp => {
       const matchesSearch = emp.name.toLowerCase().includes(search.toLowerCase()) || emp.employeeId.toLowerCase().includes(search.toLowerCase());
       const matchesDept = processFilter === "All Departments" || emp.department === processFilter;
       const matchesFit = fitmentFilter === "All Fitment Status" || getFitmentBand(emp.scores.fitment) === fitmentFilter;
@@ -117,7 +114,7 @@ export default function FitmentAnalysis() {
     }
   };
 
-  const departments = useMemo(() => ["All Departments", ...new Set(employees.map(e => e.department))], []);
+  const departments = useMemo(() => ["All Departments", ...new Set(centralEmployees.map(e => e.department))], []);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-['Inter']">
@@ -212,7 +209,7 @@ export default function FitmentAnalysis() {
                           <span>{emp.scores.productivity}%</span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-700 font-medium">${(emp.salary || 0).toLocaleString()}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-gray-700 font-medium">${emp.salary.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
