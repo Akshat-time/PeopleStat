@@ -1,0 +1,3 @@
+user,activityType,date,durationMinutes,tower,category
+john@company.com,meeting,2025-01-15,60,Engineering,Development
+jane@company.com,coding,2025-01-15,120,Engineering,Development
