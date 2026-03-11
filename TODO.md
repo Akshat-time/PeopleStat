@@ -1,4 +1,15 @@
-# TODO: Complete Settings Page Redesign
+Fixes applied:
+1. CORS configuration in backend.
+2. 2. Manager role access fix.
+   3. 3. AI Chat hardcoded URL fix.
+      4. 4. Upload route fixes.
+         5. 5. Frontend hardcoded URLs.
+            6. 6. Server startup configs.
+               7. 7. Bug fixes in dashboard.
+                  8. 8. Role-based fitment logic fix.
+                     9.
+                     10. ---
+                     11. # TODO: Complete Settings Page Redesign
 
 ## Tasks Completed:
 - [x] Created new Settings page from scratch matching "System Configuration – Governance Hub" design
