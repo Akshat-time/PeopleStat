@@ -34,3 +34,14 @@ export const protect = async (req, res, next) => {
     });
   }
 };
+
+export const managerOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'manager') {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      error: 'Access denied: Manager role required',
+    });
+  }
+};

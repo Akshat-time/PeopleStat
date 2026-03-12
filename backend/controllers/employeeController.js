@@ -1,4 +1,5 @@
 import Employee from "../models/Employee.js";
+import xlsx from "xlsx";
 
 export const addEmployee = async (req, res) => {
   try {
@@ -20,29 +21,42 @@ export const getEmployees = async (req, res) => {
 
 export const uploadBulkEmployees = async (req, res) => {
   try {
-    const { employees } = req.body;
+    let employees = [];
 
-    if (!Array.isArray(employees) || employees.length === 0) {
-      return res.status(400).json({ error: 'No employees provided' });
+    // Parse from file buffer (CSV/XLSX)
+    if (req.file) {
+      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      employees = xlsx.utils.sheet_to_json(worksheet);
+    } else if (req.body.employees && Array.isArray(req.body.employees)) {
+      employees = req.body.employees;
+    }
+
+    if (employees.length === 0) {
+      return res.status(400).json({ error: 'No employee data found in upload.' });
     }
 
     const savedEmployees = [];
     for (const emp of employees) {
       try {
         const userid = emp.userid || `EMP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const emailToFind = emp.email || emp.Email || emp.EMAIL;
         
+        if (!emailToFind) continue;
+
         const employeeDoc = await Employee.findOneAndUpdate(
-          { email: emp.email },
+          { email: emailToFind },
           {
             userid,
-            name: emp.name,
-            email: emp.email,
-            department: emp.department || '',
-            position: emp.position || '',
-            salary: emp.salary ? parseInt(emp.salary) : 0,
-            productivity: emp.productivity ? parseInt(emp.productivity) : 0,
-            utilization: emp.utilization ? parseInt(emp.utilization) : 0,
-            fitmentScore: emp.fitmentScore ? parseFloat(emp.fitmentScore) : 0,
+            name: emp.name || emp.Name || emp.NAME,
+            email: emailToFind,
+            department: emp.department || emp.Department || '',
+            position: emp.position || emp.Position || '',
+            salary: parseInt(emp.salary || emp.Salary) || 0,
+            productivity: parseInt(emp.productivity || emp.Productivity) || 0,
+            utilization: parseInt(emp.utilization || emp.Utilization) || 0,
+            fitmentScore: parseFloat(emp.fitmentScore || emp.Fitment || 0),
             updatedAt: new Date(),
           },
           { 
@@ -54,13 +68,13 @@ export const uploadBulkEmployees = async (req, res) => {
         
         savedEmployees.push(employeeDoc);
       } catch (err) {
-        console.error(`Error saving employee ${emp.email}:`, err.message);
+        console.error(`Error saving employee record:`, err.message);
       }
     }
 
     res.json({
       success: true,
-      count: savedEmployees.length,
+      insertedCount: savedEmployees.length,
       employees: savedEmployees,
     });
   } catch (error) {

@@ -46,17 +46,45 @@ import {
 import { employees as initialEmployees, getOverallRisk } from "@/data/mockEmployeeData";
 import { useAuth } from "@/lib/auth";
 import EmployeeDrawer from "@/components/EmployeeDrawer";
+import { api } from "@/servicess/api";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Softskills() {
   const { user } = useAuth();
   const isEmployee = user?.role === "employee";
+  const { toast } = useToast();
+  const [employees, setEmployees] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const response = await api.get("/employees");
+        if (response.data.success) {
+          setEmployees(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch employees:", error);
+        toast({
+          title: "Error",
+          description: "Could not load soft skills data.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadEmployees();
+  }, [toast]);
 
   const centralEmployees = useMemo(() => {
     if (isEmployee) {
-      return initialEmployees.filter(e => e.employeeId === user.employeeId);
+      return employees.filter(e => e.employeeId === user?.employeeId);
     }
-    return initialEmployees;
-  }, [isEmployee, user]);
+    return employees;
+  }, [isEmployee, user, employees]);
 
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -67,12 +95,16 @@ export default function Softskills() {
   const calculateTraits = (emps) => {
     const total = emps.length || 1;
     const scores = emps.reduce((acc, e) => {
-      acc.communication += e.scores.skill;
-      acc.teamwork += (e.scores.skill + e.scores.aptitude) / 2;
-      acc.leadership += e.scores.aptitude;
-      acc.empathy += (e.scores.skill + (100 - e.scores.fatigue)) / 2;
-      acc.stressResilience += 100 - e.scores.fatigue;
-      acc.learningAgility += (e.scores.skill + 2 * e.scores.aptitude) / 3;
+      const skill = e.scores?.skill || e.skillScore || 60;
+      const aptitude = e.scores?.aptitude || e.aptitudeScore || 60;
+      const fatigue = e.scores?.fatigue || e.fatigue || 0;
+      
+      acc.communication += skill;
+      acc.teamwork += (skill + aptitude) / 2;
+      acc.leadership += aptitude;
+      acc.empathy += (skill + (100 - fatigue)) / 2;
+      acc.stressResilience += 100 - fatigue;
+      acc.learningAgility += (skill + 2 * aptitude) / 3;
       return acc;
     }, {
       communication: 0,
@@ -180,10 +212,10 @@ export default function Softskills() {
   ], [traitScores]);
 
   const riskSignals = useMemo(() => {
-    const highBurnout = centralEmployees.filter(e => e.scores.fatigue > 80);
-    const skillGap = centralEmployees.filter(e => e.scores.fitment < 70);
-    const lowLeadership = centralEmployees.filter(e => e.scores.aptitude < 65);
-    const criticalAttrition = centralEmployees.filter(e => e.scores.fatigue > 85 && e.scores.utilization > 90);
+    const highBurnout = centralEmployees.filter(e => (e.scores?.fatigue || e.fatigue || 0) > 80);
+    const skillGap = centralEmployees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) < 70);
+    const lowLeadership = centralEmployees.filter(e => (e.scores?.aptitude || e.aptitudeScore || 0) < 65);
+    const criticalAttrition = centralEmployees.filter(e => (e.scores?.fatigue || e.fatigue || 0) > 85 && (e.scores?.utilization || e.utilization || 0) > 90);
 
     return [
       {
@@ -230,10 +262,10 @@ export default function Softskills() {
   }, [centralEmployees]);
 
   const opportunities = useMemo(() => {
-    const promoReady = centralEmployees.filter(e => e.scores.fitment >= 90 && e.scores.fatigue < 50);
-    const coachingReq = centralEmployees.filter(e => e.scores.skill < 75);
-    const reassignment = centralEmployees.filter(e => e.scores.skill > 85 && e.scores.fitment < 75);
-    const leadershipPipe = centralEmployees.filter(e => e.scores.aptitude > 85 && e.scores.fitment >= 80);
+    const promoReady = centralEmployees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) >= 90 && (e.scores?.fatigue || e.fatigue || 0) < 50);
+    const coachingReq = centralEmployees.filter(e => (e.scores?.skill || e.skillScore || 0) < 75);
+    const reassignment = centralEmployees.filter(e => (e.scores?.skill || e.skillScore || 0) > 85 && (e.scores?.fitment || e.fitmentScore || 0) < 75);
+    const leadershipPipe = centralEmployees.filter(e => (e.scores?.aptitude || e.aptitudeScore || 0) > 85 && (e.scores?.fitment || e.fitmentScore || 0) >= 80);
 
     return [
       {
@@ -299,6 +331,11 @@ export default function Softskills() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter']">
       <div className="max-w-7xl mx-auto space-y-8">
+        {isLoading && (
+          <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        )}
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -485,27 +522,27 @@ export default function Softskills() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1.5 w-24">
-                        <Progress value={emp.scores.skill} className="h-1.5" />
-                        <span className="text-[10px] font-black text-slate-400">{emp.scores.skill}% Proficiency</span>
+                        <Progress value={emp.scores?.skill || emp.skillScore || 0} className="h-1.5" />
+                        <span className="text-[10px] font-black text-slate-400">{emp.scores?.skill || emp.skillScore || 0}% Proficiency</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={`border-none px-2 py-0.5 text-[10px] tracking-tighter ${getScoreBadge(emp.scores.aptitude)}`}>
-                        {getScoreLabel(emp.scores.aptitude)}
+                      <Badge variant="outline" className={`border-none px-2 py-0.5 text-[10px] tracking-tighter ${getScoreBadge(emp.scores?.aptitude || emp.aptitudeScore || 0)}`}>
+                        {getScoreLabel(emp.scores?.aptitude || emp.aptitudeScore || 0)}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${emp.scores.fatigue < 40 ? 'bg-blue-500' : emp.scores.fatigue < 70 ? 'bg-amber-500' : 'bg-red-500'}`} />
-                        <span className="text-xs font-bold text-slate-700">{100 - emp.scores.fatigue}% Sustainability</span>
+                        <div className={`w-2 h-2 rounded-full ${(emp.scores?.fatigue || emp.fatigue || 0) < 40 ? 'bg-blue-500' : (emp.scores?.fatigue || emp.fatigue || 0) < 70 ? 'bg-amber-500' : 'bg-red-500'}`} />
+                        <span className="text-xs font-bold text-slate-700">{100 - (emp.scores?.fatigue || emp.fatigue || 0)}% Sustainability</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-bold text-slate-900 tabular-nums">{(emp.scores.skill + emp.scores.aptitude) / 2}%</span>
+                      <span className="text-sm font-bold text-slate-900 tabular-nums">{Math.round(((emp.scores?.skill || emp.skillScore || 0) + (emp.scores?.aptitude || emp.aptitudeScore || 0)) / 2)}%</span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex items-center gap-1.5 text-blue-600 font-black tracking-tighter text-sm">
-                        {emp.scores.fitment}%
+                        {emp.scores?.fitment || emp.fitmentScore || 0}%
                         <ChevronRight className="h-4 w-4 text-slate-300 group-hover:translate-x-1 transition-all" />
                       </div>
                     </TableCell>
@@ -756,10 +793,10 @@ export default function Softskills() {
             <div className="pt-2">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Focus Individuals</h4>
               <div className="grid grid-cols-2 gap-2">
-                {centralEmployees.sort((a, b) => b.scores.skill - a.scores.skill).slice(0, 4).map((e, idx) => (
+                {centralEmployees.sort((a, b) => (b.scores?.skill || b.skillScore || 0) - (a.scores?.skill || a.skillScore || 0)).slice(0, 4).map((e, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3 border border-slate-100 rounded-xl text-xs font-bold text-slate-700 bg-white shadow-sm">
                     <span>{e.name}</span>
-                    <span className="text-blue-600">{e.scores.skill}%</span>
+                    <span className="text-blue-600">{e.scores?.skill || e.skillScore || 0}%</span>
                   </div>
                 ))}
               </div>
@@ -800,7 +837,7 @@ export default function Softskills() {
                       </div>
                     </div>
                     <Badge className="bg-white border-slate-200 text-slate-600 font-black text-[10px] tracking-tighter">
-                      {emp.scores?.fatigue}% Fatigue
+                      {emp.scores?.fatigue || emp.fatigue || 0}% Fatigue
                     </Badge>
                   </div>
                 ))}
@@ -855,7 +892,7 @@ export default function Softskills() {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge className="bg-green-100 text-green-700 border-green-200 font-black text-[10px] tracking-widest">
-                        {emp.scores?.fitment}% FITMENT
+                        {emp.scores?.fitment || emp.fitmentScore || 0}% FITMENT
                       </Badge>
                     </div>
                   </div>

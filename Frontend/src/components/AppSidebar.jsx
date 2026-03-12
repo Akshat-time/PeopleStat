@@ -47,7 +47,7 @@ const insightsItems = [
 ];
 
 const adminDataItems = [
-  { title: "Upload Data", url: "/upload", icon: Upload },
+  { title: "Upload Data", url: "/upload-data", icon: Upload },
 ];
 
 const adminOptimizationItems = [

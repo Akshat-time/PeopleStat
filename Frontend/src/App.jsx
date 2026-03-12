@@ -10,7 +10,6 @@ import { TooltipProvider } from "./components/ui/tooltip.jsx";
 import { Toaster } from "./components/ui/toaster.jsx";
 import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar.jsx";
 import { AppSidebar } from "./components/AppSidebar.jsx";
-import { ThemeToggle } from "./components/ThemeToggle.jsx";
 
 import { Bell, Bot } from "lucide-react";
 import { Button } from "./components/ui/button.jsx";
@@ -42,6 +41,7 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import NotFound from "./pages/not-found.jsx";
 import EmployeeDataForm from "./pages/employee/EmployeeDataForm.jsx";
+import AddEmployee from "./pages/AddEmployee.jsx";
 
 /* ---------------- PROTECTED ROUTES ---------------- */
 
@@ -142,7 +142,12 @@ function AppRouter() {
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/documentation" component={() => <ProtectedRoute component={Documentation} />} />
       <Route path="/employee/data-form" component={() => <ProtectedRoute component={EmployeeDataForm} />} />
+ feature/employee-portal-upgrade
 
+
+      <Route path="/upload-data" component={() => <ManagerRoute component={UploadData} />} />
+      <Route path="/add-employee" component={() => <ManagerRoute component={AddEmployee} />} />
+ main
 
       <Route component={NotFound} />
     </Switch>
@@ -200,6 +205,7 @@ function AppContent() {
                 <Bot className="h-5 w-5" />
               </Button>
 
+ feature/employee-portal-upgrade
               <ThemeToggle />
 
               {user && (
@@ -219,6 +225,13 @@ function AppContent() {
                   </Avatar>
                 </div>
               )}
+
+              {/* Divider */}
+              <div style={{ width: "1px", height: "24px", background: "#D4E5F7", margin: "0 6px" }} />
+
+              {/* User profile dropdown */}
+              {user && <ProfileDropdown user={user} />}
+ main
             </div>
           </header>
 

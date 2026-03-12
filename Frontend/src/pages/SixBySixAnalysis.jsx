@@ -11,7 +11,10 @@ import {
   X,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { employees as centralEmployees, getOverallRisk } from "@/data/mockEmployeeData";
+import { employees as initialEmployees, getOverallRisk } from "@/data/mockEmployeeData";
+import { api } from "@/servicess/api";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 /* ──────────────────────────────── CONFIG ──────────────────────────────── */
 
@@ -52,26 +55,58 @@ function bucket(score) {
 }
 
 function getBC(e) {
-  const roleBonus = e.position.includes("Lead") || e.position.includes("Senior") ? 85 : 60;
-  return Math.round(e.scores.aptitude * 0.4 + roleBonus * 0.3 + e.scores.productivity * 0.15 + e.scores.fitment * 0.15);
+  const roleBonus = (e.position || "").includes("Lead") || (e.position || "").includes("Senior") ? 85 : 60;
+  const apt = e.scores?.aptitude || e.aptitudeScore || 60;
+  const prod = e.scores?.productivity || e.productivity || 60;
+  const fit = e.scores?.fitment || e.fitmentScore || 60;
+  return Math.round(apt * 0.4 + roleBonus * 0.3 + prod * 0.15 + fit * 0.15);
 }
 
 function aiRec(e) {
-  if (e.scores.fatigue > 75)             return "Reduce workload and rebalance tasks.";
-  if (e.scores.fitment < 50)             return "Reskill or redeploy to better-fit role.";
-  if (e.scores.automationPotential > 70) return "Target for automation or role redesign.";
-  if (e.scores.aptitude > 85)            return "Consider for leadership or strategic projects.";
+  const fatigue = e.scores?.fatigue || e.fatigue || 0;
+  const fitment = e.scores?.fitment || e.fitmentScore || 0;
+  const auto = e.scores?.automationPotential || e.automationPotential || 0;
+  const apt = e.scores?.aptitude || e.aptitudeScore || 0;
+
+  if (fatigue > 75)             return "Reduce workload and rebalance tasks.";
+  if (fitment < 50)             return "Reskill or redeploy to better-fit role.";
+  if (auto > 70) return "Target for automation or role redesign.";
+  if (apt > 85)            return "Consider for leadership or strategic projects.";
   return "Maintain and monitor performance.";
 }
 
 /* ──────────────────────────────── MAIN PAGE ──────────────────────────────── */
 
 export default function SixBySixAnalysis() {
+  const { toast } = useToast();
   const [selected, setSelected] = useState(null); // { rowKey, col, list }
+  const [employees, setEmployees] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const response = await api.get("/employees");
+        if (response.data.success) {
+          setEmployees(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch employees:", error);
+        toast({
+          title: "Error",
+          description: "Could not load six-by-six analysis.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadEmployees();
+  }, [toast]);
 
   const enriched = useMemo(() =>
-    centralEmployees.map(e => ({ ...e, _bc: getBC(e) })),
-  []);
+    employees.map(e => ({ ...e, _bc: getBC(e) })),
+  [employees]);
 
   /* Build matrix */
   const matrix = useMemo(() => {
@@ -79,7 +114,7 @@ export default function SixBySixAnalysis() {
     rows.forEach(r => cols.forEach(c => (m[`${r.key}-${c}`] = [])));
     enriched.forEach(e => {
       rows.forEach(r => {
-        const val = r.scoreKey === "_bc" ? e._bc : (e.scores[r.scoreKey] || 0);
+        const val = r.scoreKey === "_bc" ? e._bc : (e.scores?.[r.scoreKey] || e[r.scoreKey] || 0);
         const col = bucket(val);
         m[`${r.key}-${col}`].push(e);
       });
@@ -89,17 +124,18 @@ export default function SixBySixAnalysis() {
 
   /* KPIs */
   const kpis = useMemo(() => {
-    const highRisk   = centralEmployees.filter(e => getOverallRisk(e) === "High");
-    const totalPay   = centralEmployees.reduce((s, e) => s + e.salary, 0);
-    const riskPay    = highRisk.reduce((s, e) => s + e.salary, 0);
-    const avgAuto    = centralEmployees.reduce((s, e) => s + e.scores.automationPotential, 0) / centralEmployees.length;
+    if (employees.length === 0) return { riskCount: 0, totalCost: "0M", costAtRisk: "$0K", autoPct: "0%" };
+    const highRisk   = employees.filter(e => getOverallRisk(e) === "High");
+    const totalPay   = employees.reduce((s, e) => s + (e.salary || 0), 0);
+    const riskPay    = highRisk.reduce((s, e) => s + (e.salary || 0), 0);
+    const avgAuto    = employees.reduce((s, e) => s + (e.scores?.automationPotential || e.automationPotential || 0), 0) / employees.length;
     return {
       riskCount: highRisk.length,
       totalCost: (totalPay / 1_000_000).toFixed(1) + "M",
       costAtRisk: "$" + (riskPay / 1000).toFixed(0) + "K",
       autoPct: Math.round(avgAuto) + "%",
     };
-  }, []);
+  }, [employees]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -107,8 +143,8 @@ export default function SixBySixAnalysis() {
       {/* ── HEADER ── */}
       <div>
         <h1 className="page-title">6×6 Workforce Intelligence Matrix</h1>
-        <p style={{ color: "#6B8299", marginTop: "6px", fontSize: "14px" }}>
-          AI-driven segmentation of risk, fitment and performance across {centralEmployees.length} nodes
+        <p style={{ color: "#6B8299", marginTop: "#6B8299", fontSize: "14px" }}>
+          AI-driven segmentation of risk, fitment and performance across {employees.length} nodes
         </p>
       </div>
 
@@ -129,7 +165,7 @@ export default function SixBySixAnalysis() {
 
         <div style={{ padding: "20px 24px 28px" }}>
           <p style={{ fontSize: "13px", color: "#6B8299", marginBottom: "20px" }}>
-            AI-driven segmentation of risk, fitment and performance across {centralEmployees.length} nodes
+            AI-driven segmentation of risk, fitment and performance across {employees.length} nodes
           </p>
 
           {/* Column headers */}
@@ -346,10 +382,10 @@ export default function SixBySixAnalysis() {
                 {/* Score metrics */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "14px" }}>
                   {[
-                    { label: "Fitment",    val: e.scores.fitment,            warn: e.scores.fitment < 50 },
-                    { label: "Fatigue",    val: e.scores.fatigue,            warn: e.scores.fatigue > 75 },
-                    { label: "Automation", val: e.scores.automationPotential, warn: false },
-                    { label: "Aptitude",   val: e.scores.aptitude,           warn: false },
+                    { label: "Fitment",    val: e.scores?.fitment || e.fitmentScore || 0,            warn: (e.scores?.fitment || e.fitmentScore || 0) < 50 },
+                    { label: "Fatigue",    val: e.scores?.fatigue || e.fatigue || 0,            warn: (e.scores?.fatigue || e.fatigue || 0) > 75 },
+                    { label: "Automation", val: e.scores?.automationPotential || e.automationPotential || 0, warn: false },
+                    { label: "Aptitude",   val: e.scores?.aptitude || e.aptitudeScore || 0,           warn: false },
                   ].map(({ label, val, warn }) => (
                     <div key={label} style={{
                       background: warn ? "rgba(220,60,60,0.07)" : "#F2F7FC",

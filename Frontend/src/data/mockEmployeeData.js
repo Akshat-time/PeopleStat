@@ -207,16 +207,13 @@ export function searchEmployees(query) {
 
 /* Risk Level (used in AI + Optimization) */
 export function getOverallRisk(employee) {
-  if (
-    employee.scores.fatigue >= 75 ||
-    employee.scores.fitment < 50
-  )
-    return "High";
-  if (
-    employee.scores.fatigue >= 50 ||
-    employee.scores.fitment < 70
-  )
-    return "Medium";
+  if (!employee) return "Low";
+  
+  const fatigue = employee.scores?.fatigue || employee.fatigue || 0;
+  const fitment = employee.scores?.fitment || employee.fitmentScore || 100;
+
+  if (fatigue >= 75 || fitment < 50) return "High";
+  if (fatigue >= 50 || fitment < 70) return "Medium";
   return "Low";
 }
 

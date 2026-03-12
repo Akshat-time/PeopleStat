@@ -35,6 +35,13 @@ const startServer = async () => {
 
 // Init Middleware
 app.use(express.json());
+ feature/employee-portal-upgrade
+
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true
+}));
+ main
 
 // Configure CORS for production (allow frontend origin)
 app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost:5173', process.env.FRONTEND_URL || '*'], credentials: true }));
@@ -46,6 +53,7 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
+ feature/employee-portal-upgrade
 app.get('/', (req, res) => res.send('API Running securely'));
 
 // Define Routes
@@ -63,3 +71,23 @@ if (require.main === module) {
 }
 
 module.exports = app;
+
+// Add your routes
+import authRoutes from "./routes/authRoutes.js";
+import employeeRoutes from "./routes/employeeRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import optimizationRoutes from "./routes/optimizationRoutes.js";
+
+app.use("/api/auth", authRoutes);
+app.use("/api/employees", employeeRoutes);
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/optimization", optimizationRoutes);
+
+// Server Running
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+ main

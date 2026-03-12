@@ -23,33 +23,59 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  CartesianGrid
 } from "recharts";
-import {
-  Search,
-  Download,
-} from "lucide-react";
-import { employees as centralEmployees, getFitmentBand } from "@/data/mockEmployeeData";
+import { employees as centralEmployeesMock, getFitmentBand } from "@/data/mockEmployeeData";
+import { api } from "@/servicess/api";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import { Loader2, Search, Download } from "lucide-react";
 
 /* ---------------- COMPONENT ---------------- */
 
 export default function GapAnalysis() {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const response = await api.get("/employees");
+        if (response.data.success) {
+          setEmployees(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch employees:", error);
+        toast({
+          title: "Error",
+          description: "Could not load gap analysis data.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadEmployees();
+  }, [toast]);
 
   const employeesWithGaps = useMemo(() => {
-    return centralEmployees.filter(e => e.scores.fitment < 85).map(e => {
+    return employees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) < 85).map(e => {
       let severity = "Low";
       let gapCount = 1;
-      if (e.scores.fitment < 50) {
+      const fitment = e.scores?.fitment || e.fitmentScore || 0;
+      if (fitment < 50) {
         severity = "High";
         gapCount = 4;
-      } else if (e.scores.fitment < 75) {
+      } else if (fitment < 75) {
         severity = "Medium";
         gapCount = 2;
       }
       return { ...e, severity, gapCount };
     });
-  }, []);
+  }, [employees]);
 
   const filteredEmployees = useMemo(() => {
     return employeesWithGaps.filter(
@@ -86,13 +112,18 @@ export default function GapAnalysis() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter'] space-y-8">
+      {isLoading && (
+        <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      )}
 
       {/* HEADER */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Gap Analysis</h1>
           <p className="text-slate-500 mt-1">
-            Skill, performance & development gaps across {centralEmployees.length} employees
+            Skill, performance & development gaps across {employees.length} employees
           </p>
         </div>
 
@@ -193,7 +224,7 @@ export default function GapAnalysis() {
                       {e.severity}
                     </Badge>
                   </td>
-                  <td className="p-3 text-center font-medium">{e.scores.fitment}%</td>
+                  <td className="p-3 text-center font-medium">{e.scores?.fitment || e.fitmentScore || 0}%</td>
                   <td className="p-3 text-center">
                     <Button
                       variant="ghost"
@@ -251,7 +282,7 @@ function EmployeeDetail({ employee }) {
             <CardTitle className="text-sm font-medium text-red-800 uppercase">Fitment Gap</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-red-600">-{100 - employee.scores.fitment}%</p>
+            <p className="text-3xl font-bold text-red-600">-{100 - (employee.scores?.fitment || employee.fitmentScore || 0)}%</p>
             <p className="text-xs text-red-600/70 mt-1">Below target baseline</p>
           </CardContent>
         </Card>
@@ -261,7 +292,7 @@ function EmployeeDetail({ employee }) {
             <CardTitle className="text-sm font-medium text-blue-800 uppercase">Productivity</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-blue-600">{employee.scores.productivity}%</p>
+            <p className="text-3xl font-bold text-blue-600">{employee.scores?.productivity || employee.productivity || 0}%</p>
             <p className="text-xs text-blue-600/70 mt-1">Consistency score</p>
           </CardContent>
         </Card>
@@ -271,7 +302,7 @@ function EmployeeDetail({ employee }) {
             <CardTitle className="text-sm font-medium text-purple-800 uppercase">Fatigue Risk</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-purple-600">{employee.scores.fatigue}%</p>
+            <p className="text-3xl font-bold text-purple-600">{employee.scores?.fatigue || employee.fatigue || 0}%</p>
             <p className="text-xs text-purple-600/70 mt-1">Stress exposure</p>
           </CardContent>
         </Card>
@@ -285,9 +316,9 @@ function EmployeeDetail({ employee }) {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="font-medium">Technical Competency</span>
-              <span className="text-muted-foreground">{employee.scores.fitment}% Matching</span>
+              <span className="text-muted-foreground">{employee.scores?.fitment || employee.fitmentScore || 0}% Matching</span>
             </div>
-            <Progress value={employee.scores.fitment} className="h-2" />
+            <Progress value={employee.scores?.fitment || employee.fitmentScore || 0} className="h-2" />
           </div>
 
           <div className="space-y-4 pt-4 border-t">
