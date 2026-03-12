@@ -1,9 +1,16 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const connectDB = require('./config/db');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import connectDB from './config/db.js';
+
+// Route Imports
+import authRoutes from "./routes/authRoutes.js";
+import employeeRoutes from "./routes/employeeRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import optimizationRoutes from "./routes/optimizationRoutes.js";
 
 const app = express();
 
@@ -12,82 +19,49 @@ if (!process.env.JWT_SECRET) {
   console.error('FATAL ERROR: JWT_SECRET environment variable is missing.');
   process.exit(1);
 }
-if (!process.env.FRONTEND_URL && process.env.NODE_ENV === 'production') {
-  console.warn('WARNING: FRONTEND_URL is not set. CORS may block frontend requests in production.');
-}
 
-// Set security HTTP headers
+// Security Middleware
 app.use(helmet());
-
-// Start the server after the database is connected
-const startServer = async () => {
-  try {
-    await connectDB();
-    console.log('Database connection established successfully.');
-
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
-  } catch (err) {
-    console.error('Database connection failed:', err.message);
-    process.exit(1);
-  }
-};
-
-// Init Middleware
-app.use(express.json());
- feature/employee-portal-upgrade
-
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5000', process.env.FRONTEND_URL || '*'],
   credentials: true
 }));
- main
-
-// Configure CORS for production (allow frontend origin)
-app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost:5173', process.env.FRONTEND_URL || '*'], credentials: true }));
+app.use(express.json());
 
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100
 });
 app.use('/api', limiter);
 
- feature/employee-portal-upgrade
-app.get('/', (req, res) => res.send('API Running securely'));
+// Base Route
+app.get('/', (req, res) => res.send('AI Workforce API Running securely'));
 
-// Define Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/user', require('./routes/user'));
-app.use('/api/employees', require('./routes/employees'));
-app.use('/api/assessments', require('./routes/assessments'));
-app.use('/api/analytics', require('./routes/analytics'));
-app.use('/api/ai', require('./routes/ai'));
-app.use('/api/debug', require('./routes/debug'));
-
-// Only launch the listener when run directly
-if (require.main === module) {
-  startServer();
-}
-
-module.exports = app;
-
-// Add your routes
-import authRoutes from "./routes/authRoutes.js";
-import employeeRoutes from "./routes/employeeRoutes.js";
-import uploadRoutes from "./routes/uploadRoutes.js";
-import settingsRoutes from "./routes/settingsRoutes.js";
-import optimizationRoutes from "./routes/optimizationRoutes.js";
-
+// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/optimization", optimizationRoutes);
 
-// Server Running
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
- main
+// Fallback for old routes or additional ones if needed
+// app.use("/api/ai", aiRoutes); // I'll convert aiController to ESM if needed later
+
+// Server Execution
+const startServer = async () => {
+  try {
+    await connectDB();
+    console.log('Database connection established successfully.');
+
+    const PORT = process.env.PORT || 5001;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Database connection failed:', err.message);
+    process.exit(1);
+  }
+};
+
+startServer();

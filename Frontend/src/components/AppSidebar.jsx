@@ -14,6 +14,7 @@ import {
   Bot,
   ClipboardList,
   Activity,
+  Layers,
 } from "lucide-react";
 
 import {
@@ -26,16 +27,18 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
-} from "../components/ui/sidebar.jsx";
+  SidebarHeader,
+} from "./ui/sidebar.jsx";
 import { Link, useLocation } from "wouter";
-import { Button } from "../components/ui/button.jsx";
+import { Button } from "./ui/button.jsx";
 import { useAuth } from "../lib/auth.jsx";
 import { queryClient } from "../lib/queryClient.js";
+import { cn } from "../lib/utils";
+import { Avatar, AvatarFallback } from "./ui/avatar.jsx";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Employees", url: "/employees", icon: Users },
-  { title: "My Profile", url: "/settings", icon: Users },
 ];
 
 const insightsItems = [
@@ -44,6 +47,7 @@ const insightsItems = [
   { title: "Fatigue Analysis", url: "/fatigue", icon: AlertCircle },
   { title: "Workforce Intelligence", url: "/workforce-intelligence", icon: Activity },
   { title: "Gap Analysis", url: "/gap-analysis", icon: BarChart3 },
+  { title: "6x6 Workforce Analysis", url: "/six-by-six", icon: Layers },
 ];
 
 const adminDataItems = [
@@ -53,12 +57,6 @@ const adminDataItems = [
 const adminOptimizationItems = [
   { title: "AI Assistant", url: "/ai-assistant", icon: Bot },
   { title: "Optimization", url: "/optimization", icon: Zap },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
-];
-
-const systemItems = [
-  { title: "Settings", url: "/settings", icon: Settings },
-  { title: "Documentation", url: "/documentation", icon: BookOpen },
 ];
 
 export function AppSidebar() {
@@ -72,167 +70,114 @@ export function AppSidebar() {
     window.location.href = "/login";
   };
 
-  const IconWrapper = ({ icon: Icon }) => Icon ? <Icon className="h-4 w-4" /> : null;
+  const NavItem = ({ item }) => (
+    <SidebarMenuItem key={item.title}>
+      <SidebarMenuButton asChild isActive={location === item.url} className="py-2 h-9">
+        <Link to={item.url} className="flex items-center gap-3">
+          <item.icon className={cn("h-4 w-4", location === item.url ? "text-white" : "text-sidebar-foreground/70")} />
+          <span className={cn("font-medium", location === item.url ? "text-white" : "text-sidebar-foreground/70")}>
+            {item.title}
+          </span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
 
   return (
-    <Sidebar>
-      <SidebarContent className="py-2">
-        {/* HEADER */}
-        <div className="px-4 py-2 mb-2">
-          <h1 className="text-lg font-bold">AI Workforce Optimization</h1>
-          <p className="text-xs text-muted-foreground">Enterprise HR Analytics</p>
+    <Sidebar className="border-r-0 bg-sidebar">
+      <SidebarHeader className="px-6 py-6 pb-2">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <div className="bg-white/10 p-1.5 rounded-lg">
+              <Activity className="h-5 w-5 text-sidebar-foreground" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-white tracking-tight leading-none">AI Workforce</h1>
+              <p className="text-[10px] text-sidebar-foreground/50 font-medium uppercase tracking-widest mt-0.5">Enterprise Analytics</p>
+            </div>
+          </div>
         </div>
 
+        {/* USER BLOCK */}
+        {user && (
+          <div className="mt-8 mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
+            <Avatar className="h-9 w-9 border border-white/10">
+              <AvatarFallback className="bg-sidebar-accent text-white text-xs">
+                {user.username?.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-sm font-bold text-white truncate">{user.username}</span>
+              <span className="text-[10px] text-sidebar-foreground/50 capitalize font-medium">{user.role}</span>
+            </div>
+          </div>
+        )}
+      </SidebarHeader>
+
+      <SidebarContent className="px-3">
         {/* MAIN SECTION */}
         <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] font-black tracking-[0.2em] text-sidebar-foreground/30 px-3 uppercase mb-2">Main</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.filter(item => {
-                if (role === "employee") {
-                  return ["Dashboard", "My Profile"].includes(item.title);
-                }
-                return item.title !== "My Profile";
-              }).map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link to={item.url}>
-                      <IconWrapper icon={item.icon} />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems.map((item) => <NavItem key={item.title} item={item} />)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* PORTAL SECTION */}
+        {/* INSIGHTS SECTION */}
         <SidebarGroup>
-          <SidebarGroupLabel>{role === "manager" ? "Insights" : "Employee Portal"}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] font-black tracking-[0.2em] text-sidebar-foreground/30 px-3 uppercase mb-2">
+            {role === "manager" ? "Insights" : "Employee Portal"}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {role === "employee" ? (
                 <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/softskills"}>
-                      <Link to="/softskills">
-                        <Brain className="h-4 w-4" />
-                        <span>Skill Overview</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/fatigue"}>
-                      <Link to="/fatigue">
-                        <AlertCircle className="h-4 w-4" />
-                        <span>Fatigue Status</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/employee/data-form"}>
-                      <Link to="/employee/data-form">
-                        <ClipboardList className="h-4 w-4" />
-                        <span>Employee Data Form</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <NavItem item={{ title: "Skill Overview", url: "/softskills", icon: Brain }} />
+                  <NavItem item={{ title: "Fatigue Status", url: "/fatigue", icon: AlertCircle }} />
+                  <NavItem item={{ title: "Employee Data Form", url: "/employee/data-form", icon: ClipboardList }} />
                 </>
               ) : (
-                <>
-                  {insightsItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={location === item.url}>
-                        <Link to={item.url}>
-                          <IconWrapper icon={item.icon} />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location === "/six-by-six"}>
-                      <Link to="/six-by-six">
-                        <BarChart3 className="h-4 w-4" />
-                        <span>6×6 Workforce Analysis</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
+                insightsItems.map((item) => <NavItem key={item.title} item={item} />)
               )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* ADMIN/MANAGER ONLY SECTION */}
+        {/* ADMIN DATA SECTION */}
         {role === "manager" && (
-          <>
-            <SidebarGroup>
-              <SidebarGroupLabel>Admin Data</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminDataItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={location === item.url}>
-                        <Link to={item.url}>
-                          <IconWrapper icon={item.icon} />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Optimization</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminOptimizationItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={location === item.url}>
-                        <Link to={item.url}>
-                          <IconWrapper icon={item.icon} />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] font-black tracking-[0.2em] text-sidebar-foreground/30 px-3 uppercase mb-2">Admin Data</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminDataItems.map((item) => <NavItem key={item.title} item={item} />)}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
 
-        {/* SYSTEM SECTION */}
-        <SidebarGroup>
-          <SidebarGroupLabel>System</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {systemItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link to={item.url}>
-                      <IconWrapper icon={item.icon} />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* OPTIMIZATION SECTION */}
+        {role === "manager" && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] font-black tracking-[0.2em] text-sidebar-foreground/30 px-3 uppercase mb-2">Optimization</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminOptimizationItems.map((item) => <NavItem key={item.title} item={item} />)}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
-      <SidebarFooter className="p-2">
-        <Button variant="outline" className="w-full" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
+      <SidebarFooter className="p-4 mt-auto">
+        <Button 
+          variant="ghost" 
+          className="w-full bg-white/5 hover:bg-white/10 text-sidebar-foreground hover:text-white border border-white/10 justify-start px-4 h-11 transition-all group" 
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4 mr-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+          <span className="font-bold text-xs uppercase tracking-widest">Logout</span>
         </Button>
       </SidebarFooter>
     </Sidebar>

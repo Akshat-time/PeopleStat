@@ -188,30 +188,15 @@
   color: #88BDF2 !important;
 }
 
-/* ============================================================
-   SIDEBAR — shell override (AppSidebar uses fully custom layout)
+/* ============================================================ 
+   SIDEBAR 
    ============================================================ */
 
-[data-sidebar="sidebar"] {
-  background: transparent !important;
-  border-right: none !important;
-  padding: 0 !important;
-}
-
-[data-sidebar="sidebar"] > div {
-  height: 100%;
-}
-
-/* Strip any padding/color Shadcn injects on content wrappers */
-[data-sidebar="content"] {
-  padding: 0 !important;
-  background: transparent !important;
-}
-
-/* Hide default scrollbar on the radix sidebar content area */
+/* Re-enabling standard sidebar background but keeping custom scrollbar logic if needed */
 [data-sidebar="content"]::-webkit-scrollbar {
   display: none;
 }
+
 
 /* ============================================================
    TOP NAV BAR

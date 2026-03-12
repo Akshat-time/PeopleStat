@@ -248,6 +248,16 @@ export default function Login() {
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
 
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
+              <p className="font-bold mb-1">Demo Credentials:</p>
+              <div className="flex justify-between">
+                <span>Manager: manager@example.com / password123</span>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span>Employee: employee / 1234</span>
+              </div>
+            </div>
+
             <div className="text-center text-sm">
               New user?{" "}
               <button
@@ -258,6 +268,7 @@ export default function Login() {
                 Create account
               </button>
             </div>
+
           </form>
         </Card>
       </div>

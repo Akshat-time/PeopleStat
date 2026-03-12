@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
-require('dotenv').config();
+import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import 'dotenv/config';
 
 const connectDB = async () => {
   try {
@@ -34,22 +34,10 @@ const connectDB = async () => {
     // expose URI for debugging other processes
     process.env.CURRENT_DB_URI = uri;
 
-    // auto-seed if a seeder exists
-    try {
-      const seedDatabase = require('../seed');
-      if (typeof seedDatabase === 'function') {
-        console.log('Auto-seeding local demo database...');
-        await seedDatabase();
-        console.log('Auto-seed complete.');
-      }
-    } catch (seederErr) {
-      console.warn('No seed module found, skipping auto-seed.');
-    }
-
   } catch (err) {
     console.error('Database Initialization failed:', err.message);
     process.exit(1);
   }
 };
 
-module.exports = connectDB;
+export default connectDB;

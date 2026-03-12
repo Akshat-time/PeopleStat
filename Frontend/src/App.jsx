@@ -1,6 +1,3 @@
-// App.jsx
-import GapAnalysis from "./pages/GapAnalysis.jsx";
-
 import { useEffect, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -11,9 +8,14 @@ import { Toaster } from "./components/ui/toaster.jsx";
 import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar.jsx";
 import { AppSidebar } from "./components/AppSidebar.jsx";
 
-import { Bell, Bot } from "lucide-react";
+import { NotificationPanel } from "./components/NotificationPanel.jsx";
+import { ProfileDropdown } from "./components/ProfileDropdown.jsx";
+import { ThemeToggle } from "./components/ThemeToggle.jsx";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip.jsx";
+import { HelpCircle, Lock, Bot } from "lucide-react";
+import { Badge } from "./components/ui/badge.jsx";
 import { Button } from "./components/ui/button.jsx";
-import { Avatar, AvatarFallback } from "./components/ui/avatar.jsx";
+import { cn } from "@/lib/utils";
 
 import { AuthProvider, useAuth } from "./lib/auth.jsx";
 import { WorkforceProvider } from "./contexts/WorkforceContext.jsx";
@@ -28,9 +30,9 @@ import FitmentAnalysis from "./pages/FitmentAnalysis.jsx";
 import Softskills from "./pages/Softskills.jsx";
 import Fatigue from "./pages/Fatigue.jsx";
 import WorkforceIntelligence from "./pages/WorkforceIntelligence.jsx";
+import GapAnalysis from "./pages/GapAnalysis.jsx";
 import SixBySixAnalysis from "./pages/SixBySixAnalysis.jsx";
 import Optimization from "./pages/Optimization.jsx";
-import Reports from "./pages/Reports.jsx";
 import UploadData from "./pages/UploadData.jsx";
 import Settings from "./pages/Settings.jsx";
 import Documentation from "./pages/Documentation.jsx";
@@ -43,33 +45,30 @@ import NotFound from "./pages/not-found.jsx";
 import EmployeeDataForm from "./pages/employee/EmployeeDataForm.jsx";
 import AddEmployee from "./pages/AddEmployee.jsx";
 
+
 /* ---------------- PROTECTED ROUTES ---------------- */
 
 function ProtectedRoute({ component: Component }) {
   const { user, isLoading } = useAuth();
   const [, navigate] = useLocation();
 
-  console.log("ProtectedRoute - user:", user, "isLoading:", isLoading);
-
   useEffect(() => {
-    console.log("ProtectedRoute useEffect - isLoading:", isLoading, "user:", user);
     if (!isLoading && !user) {
-      console.log("Redirecting to login");
       navigate("/login");
     }
   }, [isLoading, user]);
 
   if (isLoading) {
-    console.log("Showing loading screen");
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <div className="h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-slate-500 animate-pulse">Initializing platform...</p>
+      </div>
+    );
   }
 
-  if (!user) {
-    console.log("No user, returning null");
-    return null;
-  }
+  if (!user) return null;
 
-  console.log("Rendering component");
   return <Component />;
 }
 
@@ -82,18 +81,27 @@ function ManagerRoute({ component: Component }) {
   }, [isLoading, user]);
 
   if (isLoading)
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <div className="h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-slate-500 animate-pulse">Checking permissions...</p>
+      </div>
+    );
 
   if (!user) return null;
 
   if (user.role !== "manager") {
     return (
       <div className="flex items-center justify-center h-screen text-center">
-        <div>
-          <h1 className="text-2xl font-semibold">Access Denied</h1>
-          <p className="text-muted-foreground">
-            Manager access required
+        <div className="max-w-md p-8 bg-white rounded-2xl shadow-xl border border-slate-100">
+          <div className="h-16 w-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+          <p className="text-slate-500 mb-8">
+            This section requires Manager level access. Please contact your administrator if you believe this is an error.
           </p>
+          <Button onClick={() => window.location.href = "/"}>Return to Dashboard</Button>
         </div>
       </div>
     );
@@ -142,12 +150,8 @@ function AppRouter() {
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/documentation" component={() => <ProtectedRoute component={Documentation} />} />
       <Route path="/employee/data-form" component={() => <ProtectedRoute component={EmployeeDataForm} />} />
- feature/employee-portal-upgrade
-
-
       <Route path="/upload-data" component={() => <ManagerRoute component={UploadData} />} />
       <Route path="/add-employee" component={() => <ManagerRoute component={AddEmployee} />} />
- main
 
       <Route component={NotFound} />
     </Switch>
@@ -159,7 +163,7 @@ function AppRouter() {
 
 function AppContent() {
   const { user } = useAuth();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const isAuthPage = location === "/login" || location === "/register";
@@ -175,65 +179,71 @@ function AppContent() {
 
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header */}
-          <header className="flex items-center justify-between px-4 py-2 border-b bg-background">
-            <div className="flex items-center gap-3">
+          <header className="flex items-center justify-between px-6 py-3 border-b bg-background sticky top-0 z-40">
+            <div className="flex items-center gap-4">
               <SidebarTrigger />
+              <div className="h-6 w-px bg-slate-200" />
               <div className="flex items-center gap-2">
-                <div className="font-semibold text-sm">
+                <div className="font-bold text-slate-900 tracking-tight">
                   AI Workforce Optimization
                 </div>
                 {user && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                    {user.role === "manager" ? "Manager Portal" : "Employee Portal"}
-                  </span>
+                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 transition-colors uppercase text-[10px] font-bold tracking-wider px-2 py-0.5">
+                        {user.role === "manager" ? "Manager" : "Employee"}
+                    </Badge>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" />
-              </Button>
+            <div className="flex items-center gap-2 lg:gap-4">
+              <div className="flex items-center gap-1 border-r pr-4 border-slate-200">
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <NotificationPanel onNavigate={navigate} />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Notifications (F8)</TooltipContent>
+                </Tooltip>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsChatOpen(!isChatOpen)}
-                className={isChatOpen ? "bg-accent" : ""}
-              >
-                <Bot className="h-5 w-5" />
-              </Button>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <ThemeToggle />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Toggle Theme</TooltipContent>
+                </Tooltip>
 
- feature/employee-portal-upgrade
-              <ThemeToggle />
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsChatOpen(!isChatOpen)}
+                            className={cn("transition-colors", isChatOpen ? "bg-blue-50 text-blue-600" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100")}
+                        >
+                            <Bot className="h-5 w-5" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">AI Copilot</TooltipContent>
+                </Tooltip>
 
-              {user && (
-                <div className="flex items-center gap-2 pl-2 border-l">
-                  <div className="text-right">
-                    <p className="text-sm font-medium leading-none">
-                      {user.username}
-                    </p>
-                    <p className="text-xs text-muted-foreground capitalize">
-                      {user.role}
-                    </p>
-                  </div>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      {user.username?.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              )}
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate("/documentation")}
+                            className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                        >
+                            <HelpCircle className="h-5 w-5" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Help & Documentation</TooltipContent>
+                </Tooltip>
+              </div>
 
-              {/* Divider */}
-              <div style={{ width: "1px", height: "24px", background: "#D4E5F7", margin: "0 6px" }} />
-
-              {/* User profile dropdown */}
               {user && <ProfileDropdown user={user} />}
- main
             </div>
           </header>
+
 
           {/* Page */}
           <main className="flex-1 overflow-auto p-6">

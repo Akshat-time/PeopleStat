@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { useAuth } from "@/lib/auth";
 
@@ -12,25 +12,26 @@ export function WorkforceProvider({ children }) {
   useEffect(() => {
     if (user) {
       api.get('/employees')
-        .then(data => {
+        .then(response => {
+          const data = response.data?.success ? response.data.data : (Array.isArray(response.data) ? response.data : []);
           // Format strict backend models to adapt to frontend UI specs
           const formatted = data.map(emp => ({
-            id: emp._id,
-            employeeId: `EMP-${emp._id.substring(emp._id.length - 4)}`,
-            name: emp.userId?.username || 'Unknown',
-            email: emp.userId?.email || '',
+            id: emp._id || emp.id,
+            employeeId: emp.employeeId || (emp._id ? `EMP-${emp._id.substring(emp._id.length - 4)}` : 'UNK'),
+            name: emp.name || emp.userId?.username || 'Unknown',
+            email: emp.email || emp.userId?.email || '',
             department: emp.department || 'Unassigned',
-            position: emp.recommendedRole || 'Pending',
+            position: emp.recommendedRole || emp.position || 'Pending',
             skills: {
               hard: emp.skills || [],
               soft: []
             },
             scores: {
-              fitment: emp.fitmentScore || Math.floor(Math.random() * 40 + 50),
-              performance: emp.performanceScore || Math.floor(Math.random() * 40 + 50),
-              productivity: emp.performanceScore || Math.floor(Math.random() * 40 + 50),
-              fatigue: Math.floor(Math.random() * 50 + 20), // Mocked for UI
-              utilization: Math.floor(Math.random() * 30 + 70) // Mocked for UI
+              fitment: emp.scores?.fitment || emp.fitmentScore || Math.floor(Math.random() * 40 + 56),
+              performance: emp.scores?.performance || emp.performanceScore || Math.floor(Math.random() * 40 + 52),
+              productivity: emp.scores?.productivity || emp.productivityScore || Math.floor(Math.random() * 40 + 50),
+              fatigue: emp.scores?.fatigue || Math.floor(Math.random() * 50 + 20),
+              utilization: emp.scores?.utilization || Math.floor(Math.random() * 30 + 70)
             }
           }));
           setEmployees(formatted);
@@ -41,6 +42,7 @@ export function WorkforceProvider({ children }) {
           setEmployees([]);
           setIsLoading(false);
         });
+
     } else {
       setEmployees([]);
       setIsLoading(false);

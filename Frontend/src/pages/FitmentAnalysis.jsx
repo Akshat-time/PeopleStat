@@ -71,7 +71,7 @@ export default function FitmentAnalysis() {
       { name: "Fit", value: counts["Fit"], color: "#10b981" },
       { name: "Overfit", value: counts["Overfit"], color: "#8b5cf6" },
     ];
-  }, []);
+  }, [centralEmployees]);
 
   const kpiData = useMemo(() => {
     const fitPlusOver = distribution.filter(d => d.name === "Fit" || d.name === "Overfit").reduce((a, b) => a + b.value, 0);
@@ -106,7 +106,7 @@ export default function FitmentAnalysis() {
       productivity: e.scores?.productivity || e.productivity || 0,
       category: getFitmentBand(e.scores?.fitment || e.fitmentScore || 0)
     }));
-  }, []);
+  }, [centralEmployees]);
 
   const processRisks = useMemo(() => {
     const depts = [...new Set(centralEmployees.map(e => e.department))];
@@ -122,7 +122,7 @@ export default function FitmentAnalysis() {
         skill: "Core Competency"
       };
     }).sort((a, b) => b.unfit - a.unfit);
-  }, []);
+  }, [centralEmployees]);
 
   const filteredEmployees = useMemo(() => {
     return centralEmployees.filter(emp => {
@@ -131,7 +131,7 @@ export default function FitmentAnalysis() {
       const matchesFit = fitmentFilter === "All Fitment Status" || getFitmentBand(emp.scores?.fitment || emp.fitmentScore || 0) === fitmentFilter;
       return matchesSearch && matchesDept && matchesFit;
     }).sort((a, b) => (b.scores?.fitment || b.fitmentScore || 0) - (a.scores?.fitment || a.fitmentScore || 0));
-  }, [search, processFilter, fitmentFilter]);
+  }, [centralEmployees, search, processFilter, fitmentFilter]);
 
   const getFitmentColor = (fitmentBand) => {
     switch (fitmentBand) {
@@ -152,7 +152,7 @@ export default function FitmentAnalysis() {
     }
   };
 
-  const departments = useMemo(() => ["All Departments", ...new Set(centralEmployees.map(e => e.department))], []);
+  const departments = useMemo(() => ["All Departments", ...new Set(centralEmployees.map(e => e.department))], [centralEmployees]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter']">

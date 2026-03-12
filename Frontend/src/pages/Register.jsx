@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Mail, Lock, User, Building, Sparkles } from "lucide-react";
 
+import { FormField } from "@/components/FormField.jsx";
+
 export default function Register() {
   const [, setLocation] = useLocation();
   const { register } = useAuth();
@@ -27,9 +29,44 @@ export default function Register() {
   const [role, setRole] = useState("employee");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [touched, setTouched] = useState({});
+
+  const validateEmail = (email) => {
+    return String(email)
+      .toLowerCase()
+      .match(
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+      );
+  };
+
+  const getErrors = () => {
+    const errors = {};
+    if (username.length < 3) errors.username = "Username must be at least 3 characters";
+    if (!validateEmail(email)) errors.email = "Invalid email address";
+    if (password.length < 6) errors.password = "Password must be at least 6 characters";
+    if (!/[A-Z]/.test(password)) errors.password = "Password must contain at least one uppercase letter";
+    return errors;
+  };
+
+  const formErrors = getErrors();
+
+  const handleBlur = (field) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setTouched({ username: true, email: true, password: true, department: true });
+    
+    if (Object.keys(formErrors).length > 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the errors in the form.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     setError("");
 
@@ -49,16 +86,17 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950">
-      <Card className="w-full max-w-md shadow-2xl border-0">
+      <Card className="w-full max-w-md shadow-2xl border-0 overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
         <CardHeader className="text-center space-y-4 pb-8">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
             <Sparkles className="h-8 w-8 text-white" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
               Create Your Account
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-sm text-muted-foreground mt-2 font-medium">
               Join AI Workforce Optimization Platform
             </p>
           </div>
@@ -66,78 +104,97 @@ export default function Register() {
 
         <CardContent>
           {error && (
-            <Alert variant="destructive" className="mb-6">
+            <Alert variant="destructive" className="mb-6 animate-in fade-in zoom-in duration-300">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+          <form onSubmit={handleRegister} className="space-y-6">
+            <FormField
+              label="Username"
+              required
+              touched={touched.username}
+              error={formErrors.username}
+              success={!formErrors.username ? "Username is valid" : ""}
+            >
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
                 <Input
                   id="username"
                   type="text"
                   placeholder="johndoe"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="pl-10"
-                  required
+                  onBlur={() => handleBlur("username")}
+                  className="pl-10 h-11"
                   data-testid="input-username"
                 />
               </div>
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+            <FormField
+              label="Email"
+              required
+              touched={touched.email}
+              error={formErrors.email}
+              success={!formErrors.email ? "Email is valid" : ""}
+            >
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="john@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
+                  onBlur={() => handleBlur("email")}
+                  className="pl-10 h-11"
                   data-testid="input-email"
                 />
               </div>
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+            <FormField
+              label="Password"
+              required
+              touched={touched.password}
+              error={formErrors.password}
+              success={!formErrors.password ? "Password strength: strong" : ""}
+            >
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
                 <Input
                   id="password"
                   type="password"
                   placeholder="Create a strong password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
+                  onBlur={() => handleBlur("password")}
+                  className="pl-10 h-11"
                   data-testid="input-password"
                 />
               </div>
-            </div>
+            </FormField>
 
-            <div className="space-y-2">
-              <Label htmlFor="department" className="text-sm font-medium">Department</Label>
+            <FormField
+              label="Department"
+              touched={touched.department}
+            >
               <div className="relative">
-                <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
                 <Input
                   id="department"
                   type="text"
                   placeholder="Engineering, HR, Finance, etc."
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  className="pl-10"
+                  onBlur={() => handleBlur("department")}
+                  className="pl-10 h-11"
                   data-testid="input-department"
                 />
               </div>
-            </div>
+            </FormField>
+
 
             <div className="space-y-2">
               <Label htmlFor="role" className="text-sm font-medium">Role</Label>

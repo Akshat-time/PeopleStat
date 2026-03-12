@@ -5,6 +5,7 @@ import JobDescription from '../models/jobDescriptions.js';
 import cvUploads from '../models/cvUploads.js';
 import ActivityUpload from '../models/activityUploads.js';
 import Employee from '../models/Employee.js';
+import { PassThrough } from 'stream';
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -160,8 +161,7 @@ const parseEmployeeData = (buffer, filename) => {
   if (fileExtension === 'csv') {
     return new Promise((resolve, reject) => {
       const results = [];
-      const stream = require('stream');
-      const bufferStream = new stream.PassThrough();
+      const bufferStream = new PassThrough();
       bufferStream.end(buffer);
 
       bufferStream

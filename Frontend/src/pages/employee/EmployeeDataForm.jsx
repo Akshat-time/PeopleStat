@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { employees } from "@/data/mockEmployeeData";
 import { Save, Send, User, Briefcase, Clock, Star, TrendingUp, Info } from "lucide-react";
+import { FormField } from "@/components/FormField.jsx";
 
 /**
  * EmployeeDataForm
@@ -98,6 +99,22 @@ const EmployeeDataForm = () => {
         deadlinePressure: "Medium",
     });
 
+    const [touched, setTouched] = useState({});
+    
+    const getErrors = () => {
+        const errors = {};
+        if (!formData.currentTeamName) errors.currentTeamName = "Team name is required";
+        if (formData.totalExperience < 0) errors.totalExperience = "Experience cannot be negative";
+        if (formData.currentCTC < 0) errors.currentCTC = "Salary cannot be negative";
+        return errors;
+    };
+
+    const formErrors = getErrors();
+
+    const handleBlur = (field) => {
+        setTouched(prev => ({ ...prev, [field]: true }));
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -117,6 +134,23 @@ const EmployeeDataForm = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        
+        setTouched({
+            companyName: true,
+            currentTeamName: true,
+            totalExperience: true,
+            currentCTC: true
+        });
+
+        if (Object.keys(formErrors).length > 0) {
+            toast({
+                title: "Form has errors",
+                description: "Please check the highlighted fields.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         console.log("Submitting form (Raw Data):", {
             employeeMaster: {
                 companyName: formData.companyName,
@@ -213,41 +247,36 @@ const EmployeeDataForm = () => {
                         <SectionHeader icon={User} title="1. Employee Information" description="Basic identification and organizational details" />
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                            <Label>Company Name</Label>
+                        <FormField label="Company Name" required touched={touched.companyName}>
                             <Select value={formData.companyName} onValueChange={(v) => handleSelectChange("companyName", v)}>
-                                <SelectTrigger><SelectValue placeholder="Select Company" /></SelectTrigger>
+                                <SelectTrigger onBlur={() => handleBlur("companyName")}><SelectValue placeholder="Select Company" /></SelectTrigger>
                                 <SelectContent>
                                     {companyNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Employee Name</Label>
+                        </FormField>
+                        <FormField label="Employee Name">
                             <Input value={formData.employeeName} readOnly className="bg-muted" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Employee ID</Label>
+                        </FormField>
+                        <FormField label="Employee ID">
                             <Input value={formData.employeeId} readOnly className="bg-muted" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Department</Label>
+                        </FormField>
+                        <FormField label="Department" required touched={touched.department}>
                             <Select value={formData.department} onValueChange={(v) => handleSelectChange("department", v)}>
-                                <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                                <SelectTrigger onBlur={() => handleBlur("department")}><SelectValue placeholder="Select Department" /></SelectTrigger>
                                 <SelectContent>
                                     {allDepartments.map(dept => <SelectItem key={dept} value={dept}>{dept}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Current Team Name</Label>
+                        </FormField>
+                        <FormField label="Current Team Name" required touched={touched.currentTeamName} error={formErrors.currentTeamName}>
                             <Select value={formData.currentTeamName} onValueChange={(v) => handleSelectChange("currentTeamName", v)}>
-                                <SelectTrigger><SelectValue placeholder="Select Team" /></SelectTrigger>
+                                <SelectTrigger onBlur={() => handleBlur("currentTeamName")}><SelectValue placeholder="Select Team" /></SelectTrigger>
                                 <SelectContent>
                                     {(teamMapping[formData.department] || []).map(team => <SelectItem key={team} value={team}>{team}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                        </div>
+                        </FormField>
                         <div className="space-y-2">
                             <Label>Band</Label>
                             <Select value={formData.band} onValueChange={(v) => handleSelectChange("band", v)}>
@@ -391,22 +420,18 @@ const EmployeeDataForm = () => {
                         <SectionHeader icon={TrendingUp} title="3. Experience & Compensation" description="Professional history and financial benchmarks" />
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                            <Label>Total Experience (Years)</Label>
-                            <Input name="totalExperience" type="number" step="0.1" value={formData.totalExperience} onChange={handleChange} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Exp. in Current Role (Years)</Label>
-                            <Input name="experienceInCurrentRole" type="number" step="0.1" value={formData.experienceInCurrentRole} onChange={handleChange} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Current CTC</Label>
-                            <Input name="currentCTC" type="number" value={formData.currentCTC} onChange={handleChange} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Benchmark CTC</Label>
+                        <FormField label="Total Experience (Years)" touched={touched.totalExperience} error={formErrors.totalExperience}>
+                            <Input name="totalExperience" type="number" step="0.1" value={formData.totalExperience} onChange={handleChange} onBlur={() => handleBlur("totalExperience")} />
+                        </FormField>
+                        <FormField label="Exp. in Current Role (Years)" touched={touched.experienceInCurrentRole}>
+                            <Input name="experienceInCurrentRole" type="number" step="0.1" value={formData.experienceInCurrentRole} onChange={handleChange} onBlur={() => handleBlur("experienceInCurrentRole")} />
+                        </FormField>
+                        <FormField label="Current CTC" touched={touched.currentCTC} error={formErrors.currentCTC}>
+                            <Input name="currentCTC" type="number" value={formData.currentCTC} onChange={handleChange} onBlur={() => handleBlur("currentCTC")} />
+                        </FormField>
+                        <FormField label="Benchmark CTC">
                             <Input name="benchmarkCTC" type="number" value={formData.benchmarkCTC} onChange={handleChange} />
-                        </div>
+                        </FormField>
                         <div className="space-y-2">
                             <Label>CTC Benchmark</Label>
                             <Select value={formData.ctcBenchmark} onValueChange={(v) => handleSelectChange("ctcBenchmark", v)}>
