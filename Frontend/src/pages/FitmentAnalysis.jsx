@@ -50,7 +50,7 @@ export default function FitmentAnalysis() {
   const kpiData = useMemo(() => {
     const fitPlusOver = distribution.filter(d => d.name === "Fit" || d.name === "Overfit").reduce((a, b) => a + b.value, 0);
     const misalignedCount = distribution.filter(d => d.name === "Unfit" || d.name === "Train-to-Fit").reduce((a, b) => a + b.value, 0);
-    const percentFit = centralEmployees.length > 0 ? (fitPlusOver / centralEmployees.length * 100).toFixed(1) : "0.0";
+    const percentFit = (fitPlusOver / centralEmployees.length * 100).toFixed(1);
     const costAtRisk = centralEmployees.filter(e => e.scores.fitment < 70).reduce((sum, e) => sum + e.salary, 0);
 
     return [

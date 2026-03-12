@@ -1,7 +1,7 @@
 // App.jsx
-import React, { useEffect, useState } from "react";
 import GapAnalysis from "./pages/GapAnalysis.jsx";
 
+import { useEffect, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -20,26 +20,6 @@ import { AuthProvider, useAuth } from "./lib/auth.jsx";
 import { WorkforceProvider } from "./contexts/WorkforceContext.jsx";
 import { AIProvider } from "./contexts/AIContext.jsx";
 import AIChat from "./components/AIChat.jsx";
-
-// Error boundary to prevent AIProvider crash from blanking the whole app
-class AIErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError() { return { hasError: true }; }
-  componentDidCatch(err) { console.error("AIProvider crashed:", err); }
-  render() {
-    if (this.state.hasError) {
-      return this.props.children; // render children without AI features
-    }
-    return (
-      <AIProvider>
-        {this.props.children}
-      </AIProvider>
-    );
-  }
-}
 
 /* ---------------- PAGES ---------------- */
 import Dashboard from "./pages/Dashboard.jsx";
@@ -62,7 +42,6 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import NotFound from "./pages/not-found.jsx";
 import EmployeeDataForm from "./pages/employee/EmployeeDataForm.jsx";
-import EmployeeProfile from "./pages/employee/EmployeeProfile.jsx";
 
 /* ---------------- PROTECTED ROUTES ---------------- */
 
@@ -73,19 +52,24 @@ function ProtectedRoute({ component: Component }) {
   console.log("ProtectedRoute - user:", user, "isLoading:", isLoading);
 
   useEffect(() => {
+    console.log("ProtectedRoute useEffect - isLoading:", isLoading, "user:", user);
     if (!isLoading && !user) {
+      console.log("Redirecting to login");
       navigate("/login");
     }
   }, [isLoading, user]);
 
   if (isLoading) {
+    console.log("Showing loading screen");
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
   if (!user) {
+    console.log("No user, returning null");
     return null;
   }
 
+  console.log("Rendering component");
   return <Component />;
 }
 
@@ -136,7 +120,6 @@ function AppRouter() {
       <Route path="/fitment" component={() => <ProtectedRoute component={FitmentAnalysis} />} />
       <Route path="/softskills" component={() => <ProtectedRoute component={Softskills} />} />
       <Route path="/fatigue" component={() => <ProtectedRoute component={Fatigue} />} />
-      <Route path="/employee/skills" component={() => <ProtectedRoute component={Softskills} />} />
       <Route path="/workforce-intelligence" component={() => <ManagerRoute component={WorkforceIntelligence} />} />
 
       {/* ✅ THIS ONE */}
@@ -159,7 +142,6 @@ function AppRouter() {
       <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
       <Route path="/documentation" component={() => <ProtectedRoute component={Documentation} />} />
       <Route path="/employee/data-form" component={() => <ProtectedRoute component={EmployeeDataForm} />} />
-      <Route path="/employee/profile" component={() => <ProtectedRoute component={EmployeeProfile} />} />
 
 
       <Route component={NotFound} />
@@ -221,17 +203,17 @@ function AppContent() {
               <ThemeToggle />
 
               {user && (
-                <div className="flex items-center gap-3 pl-4 border-l border-slate-200 ml-2">
-                  <div className="text-right flex flex-col items-end">
-                    <p className="text-sm font-bold text-slate-800 leading-tight">
+                <div className="flex items-center gap-2 pl-2 border-l">
+                  <div className="text-right">
+                    <p className="text-sm font-medium leading-none">
                       {user.username}
                     </p>
-                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.1em] mt-0.5">
+                    <p className="text-xs text-muted-foreground capitalize">
                       {user.role}
                     </p>
                   </div>
-                  <Avatar className="h-9 w-9 border-2 border-white shadow-sm overflow-hidden bg-slate-100">
-                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-bold text-xs">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>
                       {user.username?.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -260,12 +242,12 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <WorkforceProvider>
-          <AIErrorBoundary>
+          <AIProvider>
             <TooltipProvider>
               <AppContent />
               <Toaster />
             </TooltipProvider>
-          </AIErrorBoundary>
+          </AIProvider>
         </WorkforceProvider>
       </AuthProvider>
     </QueryClientProvider>

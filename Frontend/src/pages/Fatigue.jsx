@@ -45,13 +45,15 @@ import EmployeeDrawer from "@/components/EmployeeDrawer";
 
 export default function Fatigue() {
   const { employees: allEmployees, getOverallRisk, getFitmentBand, getFatigueRisk } = useWorkforceData();
+  const [employeeWdt, setEmployeeWdt] = useState(null);
+  const [isWdtLoading, setIsWdtLoading] = useState(false);
+
+  if (!allEmployees) return <div>Loading workforce data...</div>;
+
   const { user } = useAuth();
   const isEmployee = user?.role === "employee";
   const [, navigate] = useLocation();
   const { toast } = useToast();
-
-  const [employeeWdt, setEmployeeWdt] = useState(null);
-  const [isWdtLoading, setIsWdtLoading] = useState(true);
 
   // State for interactivity
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -62,23 +64,19 @@ export default function Fatigue() {
     if (isEmployee && user?.email) {
       setIsWdtLoading(true);
       api.get(`/employees?email=${user.email}`)
-        .then(res => {
-          const list = res.data?.data || [];
-          if (list.length > 0) {
-            setEmployeeWdt(list[0].workingHours || null);
+        .then(data => {
+          if (data && data.length > 0) {
+            setEmployeeWdt(data[0].workingHours || null);
           }
         })
         .catch(err => console.error("Error fetching WDT:", err))
         .finally(() => setIsWdtLoading(false));
-    } else {
-      setIsWdtLoading(false);
     }
   }, [isEmployee, user?.email]);
 
   const employees = useMemo(() => {
-    if (!allEmployees) return [];
     if (isEmployee) {
-      return allEmployees.filter(e => e.email === user?.email);
+      return allEmployees.filter(e => e.employeeId === user.employeeId);
     }
     return allEmployees;
   }, [isEmployee, user, allEmployees]);
@@ -102,16 +100,16 @@ export default function Fatigue() {
         (Number(w.others) || 0);
 
       const totalHours = totalWorkloadHours;
-      if (totalHours <= 0) return { overallScore: 0, riskLevel: "UNKNOWN", trend: 0, totalHours: 0, workloadIntensity: 0, overtimeFrequency: 0 };
+      if (totalHours === 0) return { overallScore: 0, riskLevel: "UNKNOWN", trend: 0, totalHours: 0 };
 
-      const utilization = (totalHours / 160) * 100;
-      const overtimeFreq = (Number(w.meetings) || 0) + (Number(w.training) || 0);
-      const fatigueScore = (utilization * 0.6) + ((overtimeFreq / 40) * 100 * 0.4);
+      const workloadIntensity = (totalHours / 160) * 100;
+      const overtimeFrequency = (((Number(w.meetings) || 0) + (Number(w.training) || 0)) / totalHours) * 100;
+      const fatigueScore = (workloadIntensity * 0.6) + (overtimeFrequency * 0.4);
 
       return {
         totalHours,
-        workloadIntensity: Math.min(100, Math.round(utilization)),
-        overtimeFrequency: Math.min(100, Math.round((overtimeFreq / 40) * 100)),
+        workloadIntensity,
+        overtimeFrequency,
         overallScore: Math.round(fatigueScore),
         riskLevel: fatigueScore >= 75 ? "CRITICAL" : fatigueScore >= 50 ? "HIGH" : "MEDIUM",
         trend: 0,
@@ -123,10 +121,10 @@ export default function Fatigue() {
       overallScore: Math.round(avgFatigue),
       riskLevel: avgFatigue >= 75 ? "CRITICAL" : avgFatigue >= 50 ? "HIGH" : "MEDIUM",
       trend: -5,
-      totalHours: 160
+      totalHours: 160 // Fallback for manager view logic if needed
     };
   }, [employees, isEmployee, employeeWdt]);
-  // Early return removed to prevent hook ordering issues
+
   const keyIndicators = useMemo(() => {
     if (isEmployee) {
       const { overallScore, workloadIntensity, overtimeFrequency } = fatigueMetrics;
@@ -313,14 +311,7 @@ export default function Fatigue() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter']">
       <div className="max-w-7xl mx-auto space-y-8">
-        {isWdtLoading ? (
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center space-y-3">
-              <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-slate-500 font-medium">Calculating your fatigue insights…</p>
-            </div>
-          </div>
-        ) : (isEmployee && (!fatigueMetrics.totalHours || fatigueMetrics.totalHours === 0)) ? (
+        {(isEmployee && (!fatigueMetrics.totalHours || fatigueMetrics.totalHours === 0)) ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
             <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex flex-col items-center max-w-lg">
               <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />

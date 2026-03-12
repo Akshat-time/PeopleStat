@@ -90,27 +90,19 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.filter(item => {
                 if (role === "employee") {
-                  if (item.title === "My Profile") {
-                    return { ...item, url: "/employee/profile" };
-                  }
                   return ["Dashboard", "My Profile"].includes(item.title);
                 }
                 return item.title !== "My Profile";
-              }).map((item) => {
-                const finalItem = (role === "employee" && item.title === "My Profile") 
-                  ? { ...item, url: "/employee/profile" } 
-                  : item;
-                return (
-                  <SidebarMenuItem key={finalItem.title}>
-                    <SidebarMenuButton asChild isActive={location === finalItem.url}>
-                      <Link to={finalItem.url}>
-                        <IconWrapper icon={finalItem.icon} />
-                        <span>{finalItem.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              }).map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url}>
+                    <Link to={item.url}>
+                      <IconWrapper icon={item.icon} />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

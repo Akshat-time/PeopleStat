@@ -2,6 +2,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { faker } = require('@faker-js/faker');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const User = require('./models/User');
 const Employee = require('./models/Employee');
@@ -27,6 +28,7 @@ const skillPool = {
 
 const seedDatabase = async () => {
   try {
+    // ensure connection is open (should already be managed by config/db)
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/ai-workforce");
       console.log('MongoDB Connected for Seeding...');
@@ -52,14 +54,59 @@ const seedDatabase = async () => {
       role: 'manager'
     });
 
-    // 2. Create Global WDT Assessment
+    // 1.5. Create Global WDT Assessment first (needed for Results)
     const globalAssessment = await Assessment.create({
       title: 'Global Engineering & Logic WDT',
       description: 'Standardized baseline test for problem solving.',
       timeLimitMinutes: 60
     });
 
-    console.log('Generating 20 Demo Employees...');
+    // 2. Create test employee accounts with known usernames
+    const testEmployees = [
+      { username: 'mary.johnson', email: 'mary.johnson@example.com', firstName: 'Mary', lastName: 'Johnson' },
+      { username: 'john.smith', email: 'john.smith@example.com', firstName: 'John', lastName: 'Smith' },
+      { username: 'sarah.davis', email: 'sarah.davis@example.com', firstName: 'Sarah', lastName: 'Davis' }
+    ];
+
+    console.log('Creating test employee accounts...');
+    for (const testEmp of testEmployees) {
+      try {
+        console.log(`  Creating user: ${testEmp.username}...`);
+        const user = await User.create({
+          username: testEmp.username,
+          email: testEmp.email,
+          password: hashedPassword,
+          role: 'employee'
+        });
+        console.log(`  ✓ User created with ID: ${user._id}`);
+
+        // Create basic employee profile
+        try {
+          const dept = faker.helpers.arrayElement(departments);
+          const recommendedRole = faker.helpers.arrayElement(roleMap[dept]);
+          const poolKey = skillPool[recommendedRole] ? recommendedRole : dept;
+          const randomSkills = faker.helpers.arrayElements(skillPool[poolKey] || ['leadership', 'agile'], faker.number.int({ min: 3, max: 6 }));
+          
+          const employee = await Employee.create({
+            userId: user._id,
+            department: dept,
+            skills: randomSkills,
+            experience: [{ title: recommendedRole, company: faker.company.name(), years: faker.number.int({ min: 1, max: 12 }) }],
+            recommendedRole: recommendedRole,
+            fitmentScore: faker.number.int({ min: 60, max: 98 }),
+            performanceScore: faker.number.int({ min: 55, max: 95 })
+          });
+          console.log(`  ✓ Employee profile: ${testEmp.username}`);
+        } catch (empErr) {
+          console.warn(`    Couldn't create employee profile: ${empErr.message}`);
+        }
+      } catch (err) {
+        console.error(`  ✗ Error creating test user: ${err.message}`);
+      }
+    }
+
+    // 3. Generate 20 Additional Demo Employees
+    console.log('Generating 20 Additional Demo Employees...');
 
     for (let i = 0; i < 20; i++) {
         const dept = faker.helpers.arrayElement(departments);
@@ -117,7 +164,12 @@ const seedDatabase = async () => {
         });
     }
 
-    console.log('Database Seeding Complete! Inserted 20 full employee networks.');
+    console.log('Database Seeding Complete! Created demo accounts and 20 full employee networks.');
+    
+    // Verify seeding
+    const userCount = await User.countDocuments();
+    console.log(`✓ Verification: ${userCount} users in database`);
+    
     if (require.main === module) {
       process.exit(0);
     }

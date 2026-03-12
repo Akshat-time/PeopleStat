@@ -19,9 +19,7 @@ import {
 import { useAI } from "@/contexts/AIContext";
 
 const AIChat = ({ isFloating = false, isOpen = true, onToggle }) => {
-  const context = useAI();
-  if (!context) return null; // Safe guard for missing provider
-  const { messages, sendMessage, isLoading, clearChat } = context;
+  const { messages, sendMessage, isLoading, clearChat } = useAI();
   const [inputMessage, setInputMessage] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef(null);
@@ -71,11 +69,23 @@ const AIChat = ({ isFloating = false, isOpen = true, onToggle }) => {
       );
     }
   };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
-    const msg = inputMessage;
+
+    const userMessage = {
+      id: Date.now(),
+      type: "user",
+      content: inputMessage,
+      timestamp: new Date()
+    };
+
+    // Add user message immediately
+    messages.push(userMessage);
     setInputMessage("");
-    await sendMessage(msg);
+
+    // Send to AI
+    await sendMessage(inputMessage);
   };
 
   const handleKeyPress = (e) => {

@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import api from "@/services/api";
-import { useLocation } from "wouter";
+import { employees } from "@/data/mockEmployeeData";
 import { Save, Send, User, Briefcase, Clock, Star, TrendingUp, Info } from "lucide-react";
 
 /**
@@ -20,117 +19,33 @@ import { Save, Send, User, Briefcase, Clock, Star, TrendingUp, Info } from "luci
 const EmployeeDataForm = () => {
     const { user } = useAuth();
     const { toast } = useToast();
-    const [, navigate] = useLocation();
 
-    // Fetch existing employee data to prefill form if available
-    const [employeesList, setEmployeesList] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    // Find the current employee's data or use a fallback
+    const currentEmployee = employees.find(e => e.email === user?.email) || employees[0];
 
-    React.useEffect(() => {
-        const fetchAndPrefill = async () => {
-            try {
-                // Fetch all employees to populate dropdowns (already exists)
-                const res = await api.get('/employees');
-                if (res.data?.success && res.data?.data) {
-                    setEmployeesList(res.data.data);
-                    
-                    // NEW: Find current user's record and pre-fill form
-                    const currentEmp = res.data.data.find(e => e.userId?.email === user?.email);
-                    if (currentEmp) {
-                        const m = currentEmp.employeeMaster || {};
-                        const p = currentEmp.processCharacteristics || {};
-                        const c = currentEmp.experienceCompensation || {};
-                        const f = currentEmp.fitmentResponses || {};
-                        const w = currentEmp.workingHours || {};
-
-                        setFormData({
-                            companyName: m.companyName || "Tech Corp",
-                            employeeName: m.employeeName || user?.username || "",
-                            employeeId: m.employeeId || "",
-                            department: m.department || "Finance",
-                            currentTeamName: m.currentTeamName || "",
-                            designation: m.designation || "",
-                            grade: m.grade || "Grade 2",
-                            band: m.band || "D2",
-                            location: m.location || "",
-                            reportingManager: m.managerName || "",
-                            employmentType: m.employmentType || "Full-Time",
-                            activeRole: m.activeRole || "Yes",
-                            primaryProcess: p.primaryProcess || "Invoicing",
-                            secondaryProcess: p.secondaryProcess || "None",
-                            processName: p.processName || "",
-                            roleDescription: p.roleDescription || "",
-                            processCategory: p.processCategory || "Transactional",
-                            consolidationType: p.consolidationType || "Consolidated",
-                            totalExperience: c.totalExperience || 0,
-                            experienceInCurrentRole: c.experienceInCurrentRole || 0,
-                            currentCTC: c.currentCTC || 0,
-                            benchmarkCTC: c.benchmarkCTC || 0,
-                            ctcBenchmark: c.ctcBenchmark || "At Median",
-                            pmsRating: f.pmsRating || "Meets Expectations",
-                            workComplexity: f.complexityOfWork || "The employee role is similar to peers",
-                            changeReadiness: f.changeReadyTechSavviness || "",
-                            customerOrientation: f.serviceCustomerOrientation || "",
-                            teamCollaboration: f.teamPlayerCollaboration || "",
-                            communication: f.communicativeness || "",
-                            selfMotivation: f.selfMotivated || "",
-                            certifications: f.additionalQualifications || "",
-                            locationPreference: f.locationPreference || "The employee could be amenable to relocate",
-                            multiplexer: f.multiplexer || "",
-                            experienceInCurrentRoleQualitative: f.experienceInCurrentRole || "Between 5 to 8 years",
-                            totalWorkExperienceQualitative: f.totalWorkExperience || "Between 5 to 8 years",
-                            customerInvoicing: w.customerInvoicing || 0,
-                            invoicePosting: w.invoicePosting || 0,
-                            paymentProcessing: w.paymentProcessing || 0,
-                            mdmSupport: w.mdmSupport || 0,
-                            recordToReport: w.recordToReport || 0,
-                            treasury: w.treasury || 0,
-                            taxation: w.taxation || 0,
-                            meetings: w.meetings || 0,
-                            training: w.training || 0,
-                            others: w.others || 0,
-                            standardWorkingHours: w.standardWorkingHours || 160,
-                            actualWorkingHours: w.actualWorkingHours || 160,
-                            overtimeHours: w.overtimeHours || 0,
-                            weekendWork: w.weekendWork || "No",
-                            multipleRoles: w.multipleRoles || "No",
-                            deadlinePressure: w.deadlinePressure || "Medium",
-                        });
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to load employee info:", err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchAndPrefill();
-    }, [user?.email, user?.username]);
-
-    // Derived options from DB or fallback
-    const allDepartments = employeesList.length > 0 ? [...new Set(employeesList.map(e => e.employeeMaster?.department))].filter(Boolean) : ["Finance", "IT", "Engineering", "Analytics", "Operations"];
-    const allManagers = employeesList.length > 0 ? [...new Set(employeesList.map(e => e.employeeMaster?.employeeName))].filter(Boolean) : ["Ramesh Kumar", "Leadership Team"];
+    // Derived options from mock data
+    const allDepartments = [...new Set(employees.map(e => e.department))].filter(Boolean);
+    const allManagers = [...new Set(employees.map(e => e.name))].filter(Boolean);
     const companyNames = ["Tech Corp", "Global Solutions", "Innovate Ltd"];
     const teamMapping = {
         "Finance": ["Accounts Receivable", "Accounts Payable", "General Ledger", "Taxation"],
         "IT": ["Infrastructure", "Software Development", "Cybersecurity", "IT Support"],
         "Engineering": ["Hardware", "DevOps", "R&D"],
         "Analytics": ["Data Science", "Business Intelligence", "Market Research"],
-        "Operations": ["Fulfillment", "Customer Success", "Logistics", "Supply Chain"],
     };
 
     const [formData, setFormData] = useState({
         // 1. Employee Information
         companyName: "Tech Corp",
-        employeeName: user?.username || "Employee Name",
-        employeeId: user?.employeeId || "EMP000",
-        department: "Finance",
+        employeeName: currentEmployee.name,
+        employeeId: currentEmployee.employeeId,
+        department: currentEmployee.department || "Finance",
         currentTeamName: "",
-        designation: "Senior Analyst",
+        designation: currentEmployee.position || "Senior Analyst",
         grade: "Grade 2",
         band: "D2",
         location: "Mumbai",
-        reportingManager: "Ramesh Kumar",
+        reportingManager: allManagers[0] || "Ramesh Kumar",
         employmentType: "Full-Time",
         activeRole: "Yes",
 
@@ -143,9 +58,9 @@ const EmployeeDataForm = () => {
         consolidationType: "Consolidated",
 
         // 3. Experience & Compensation
-        totalExperience: 0,
+        totalExperience: currentEmployee.experienceYears || 0,
         experienceInCurrentRole: 2,
-        currentCTC: 0,
+        currentCTC: currentEmployee.salary || 0,
         benchmarkCTC: 0,
         ctcBenchmark: "At Median",
 
@@ -309,10 +224,6 @@ const EmployeeDataForm = () => {
             </div>
         </div>
     );
-
-    if (isLoading) {
-        return <div className="flex justify-center items-center h-screen"><p className="text-muted-foreground">Loading specific configuration logic...</p></div>;
-    }
 
     return (
         <div className="container mx-auto max-w-5xl py-8 px-4">

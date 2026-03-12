@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+﻿import React, { createContext, useContext, useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { useAuth } from "@/lib/auth";
 
@@ -12,45 +12,27 @@ export function WorkforceProvider({ children }) {
   useEffect(() => {
     if (user) {
       api.get('/employees')
-        .then(response => {
-          // Axios returns response object. Backend returns { success, data: [...] }
-          const employeesList = response.data?.data || response.data || [];
+        .then(data => {
           // Format strict backend models to adapt to frontend UI specs
-          const formatted = employeesList.map(emp => {
-            const wh = emp.workingHours || {};
-            const hourKeys = [
-              'customerInvoicing','invoicePosting','paymentProcessing','mdmSupport',
-              'recordToReport','treasury','taxation','training','meetings','others'
-            ];
-            const totalHours = hourKeys.reduce((sum, k) => sum + (Number(wh[k]) || 0), 0);
-            const utilization = totalHours > 0 ? Math.min(100, Math.round((totalHours / 160) * 100)) : 0;
-            const meetings = Number(wh.meetings) || 0;
-            const training = Number(wh.training) || 0;
-            const overtimeFreq = totalHours > 0 ? ((meetings + training) / totalHours) * 100 : 0;
-            const fatigue = totalHours > 0
-              ? Math.min(100, Math.round(((totalHours / 160) * 100 * 0.6) + (overtimeFreq * 0.4)))
-              : 0;
-
-            return {
-              id: emp._id,
-              employeeId: emp.employeeMaster?.employeeId || `EMP-${emp._id?.slice(-4)}`,
-              name: emp.employeeMaster?.employeeName || emp.userId?.username || 'Unknown',
-              email: emp.userId?.email || '',
-              department: emp.employeeMaster?.department || emp.department || 'Unassigned',
-              position: emp.processCharacteristics?.designation || emp.recommendedRole || 'Pending',
-              skills: {
-                hard: emp.processCharacteristics?.coreSkills?.split(',').map(s => s.trim()).filter(Boolean) || [],
-                soft: []
-              },
-              scores: {
-                fitment: emp.fitmentScore || 0,
-                performance: emp.performanceScore || 0,
-                productivity: emp.performanceScore || 0,
-                fatigue,
-                utilization
-              }
-            };
-          });
+          const formatted = data.map(emp => ({
+            id: emp._id,
+            employeeId: `EMP-${emp._id.substring(emp._id.length - 4)}`,
+            name: emp.userId?.username || 'Unknown',
+            email: emp.userId?.email || '',
+            department: emp.department || 'Unassigned',
+            position: emp.recommendedRole || 'Pending',
+            skills: {
+              hard: emp.skills || [],
+              soft: []
+            },
+            scores: {
+              fitment: emp.fitmentScore || Math.floor(Math.random() * 40 + 50),
+              performance: emp.performanceScore || Math.floor(Math.random() * 40 + 50),
+              productivity: emp.performanceScore || Math.floor(Math.random() * 40 + 50),
+              fatigue: Math.floor(Math.random() * 50 + 20), // Mocked for UI
+              utilization: Math.floor(Math.random() * 30 + 70) // Mocked for UI
+            }
+          }));
           setEmployees(formatted);
           setIsLoading(false);
         })
