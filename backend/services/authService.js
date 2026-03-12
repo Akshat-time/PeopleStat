@@ -33,10 +33,16 @@ class AuthService {
   }
 
   async loginUser(usernameOrEmail, password) {
+    console.log('[authService] login attempt for', usernameOrEmail);
     let user = await User.findOne({ $or: [{ email: usernameOrEmail }, { username: usernameOrEmail }] });
-    if (!user) throw new Error('Invalid Credentials');
+    if (!user) {
+      console.log('[authService] user not found');
+      throw new Error('Invalid Credentials');
+    }
+    console.log('[authService] found user', user.username, 'hashedPassword:', user.password);
 
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('[authService] password match:', isMatch);
     if (!isMatch) throw new Error('Invalid Credentials');
 
     return this.generateToken(user);

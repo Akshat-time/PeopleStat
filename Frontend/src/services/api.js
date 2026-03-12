@@ -1,50 +1,18 @@
-const API_URL = import.meta.env.VITE_API_URL || "/api";
+import axios from "axios";
 
-const getAuthHeaders = (isMultipart = false) => {
-  const token = localStorage.getItem("token");
-  const headers = {};
-  
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  
-  if (!isMultipart) {
-    headers["Content-Type"] = "application/json";
-  }
-  
-  return headers;
-};
+const API_BASE_URL = "http://localhost:5001/api"; // backend team will confirm later
 
-export const api = {
-  get: async (endpoint) => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: "GET",
-      headers: getAuthHeaders()
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error || "API request failed");
-    return json.data;
-  },
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+});
 
-  post: async (endpoint, payload) => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload)
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error || "API request failed");
-    return json.data;
-  },
-  
-  postMultipart: async (endpoint, formData) => {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: "POST",
-      headers: getAuthHeaders(true),
-      body: formData
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error || "API request failed");
-    return json.data;
-  }
-};
+// Admin APIs
+export const fetchEmployees = () => api.get("/employees");
+export const fetchEmployeeStats = () => api.get("/employees/stats");
+export const fetchUploads = () => api.get("/uploads");
+
+// Employee APIs
+export const fetchMyFitment = () => api.get("/employee/fitment");
+export const fetchMyFatigue = () => api.get("/employee/fatigue");
+export const fetchMyRecommendations = () => api.get("/employee/recommendations");

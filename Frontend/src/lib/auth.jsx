@@ -37,7 +37,7 @@ export function AuthProvider({ children }) {
       const { password: _, ...userWithoutPassword } = foundUser;
       localStorage.setItem("mock_user", JSON.stringify(userWithoutPassword));
       setUser(userWithoutPassword);
-      return userWithoutPassword;
+      return;
     }
 
     // fallback to default mock logins
@@ -49,7 +49,7 @@ export function AuthProvider({ children }) {
       };
       localStorage.setItem("mock_user", JSON.stringify(employeeUser));
       setUser(employeeUser);
-      return employeeUser;
+      return;
     }
 
     if (usernameOrEmail === "manager" && password === "1234") {
@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
       };
       localStorage.setItem("mock_user", JSON.stringify(managerUser));
       setUser(managerUser);
-      return managerUser;
+      return;
     }
 
     throw new Error("Invalid credentials");

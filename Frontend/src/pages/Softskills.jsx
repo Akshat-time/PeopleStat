@@ -353,31 +353,31 @@ export default function Softskills() {
         {/* AI BEHAVIORAL SUMMARY BANNER */}
         {!isEmployee && (
           <Card
-            className="p-8 bg-white border border-slate-200 rounded-2xl shadow-sm cursor-pointer hover:border-blue-300 transition-all group relative overflow-hidden"
+            className="p-8 bg-gradient-to-r from-blue-900 to-slate-900 border-none rounded-2xl shadow-lg text-white cursor-pointer hover:shadow-xl transition-all group relative overflow-hidden"
             onClick={() => setActiveModal('summary')}
           >
             <div className="relative z-10 flex items-center justify-between">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-                    <Brain className="h-5 w-5 text-blue-600" />
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <Brain className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-slate-400 font-bold tracking-wider text-xs uppercase">MayaMaya Cognitive Engine</span>
+                  <span className="text-blue-300 font-bold tracking-wider text-xs uppercase">MayaMaya Cognitive Engine</span>
                 </div>
-                <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 italic">Workforce Core Capabilities</h2>
-                <p className="text-slate-600 max-w-2xl text-lg leading-relaxed">
-                  Organizational empathy and communication scores are <span className="text-blue-600 font-bold">8.4% above benchmark</span>. However, stress resilience is trending down in Finance & IT units.
+                <h2 className="text-3xl font-extrabold tracking-tight italic">Workforce Core Capabilities</h2>
+                <p className="text-slate-300 max-w-2xl text-lg leading-relaxed">
+                  Organizational empathy and communication scores are <span className="text-blue-200 font-bold">8.4% above benchmark</span>. However, stress resilience is trending down in Finance & IT units.
                 </p>
                 <div className="pt-2 flex items-center gap-4 text-sm font-medium">
-                  <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" /> <span className="text-slate-600">Strong Cultural Alignment</span></span>
-                  <span className="flex items-center gap-1.5"><AlertTriangle className="h-4 w-4 text-amber-500" /> <span className="text-slate-600">Resilience Warning</span></span>
+                  <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-400" /> Strong Cultural Alignment</span>
+                  <span className="flex items-center gap-1.5"><AlertTriangle className="h-4 w-4 text-amber-400" /> Resilience Warning</span>
                 </div>
               </div>
-              <ChevronRight className="h-10 w-10 text-slate-200 group-hover:text-blue-300 group-hover:translate-x-1 transition-all" />
+              <ChevronRight className="h-10 w-10 text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
             </div>
             {/* Visual background element */}
-            <div className="absolute right-[-10px] top-[-20px] opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
-              <Brain className="h-64 w-64 text-slate-900" />
+            <div className="absolute right-[-10px] top-[-20px] opacity-[0.05] group-hover:opacity-[0.1] transition-opacity">
+              <Brain className="h-64 w-64 text-white" />
             </div>
           </Card>
         )}
@@ -642,9 +642,9 @@ export default function Softskills() {
           </DialogHeader>
           <div className="py-8 space-y-8">
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                <p className="text-[10px] font-black text-blue-600 uppercase mb-1">Source data</p>
-                <p className="text-xl font-black text-slate-900 font-mono tracking-tighter">AI-V1.2</p>
+              <div className="p-4 bg-slate-900 rounded-2xl text-white text-center">
+                <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Source data</p>
+                <p className="text-xl font-black font-mono tracking-tighter">AI-V1.2</p>
               </div>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Update rate</p>
@@ -687,7 +687,7 @@ export default function Softskills() {
             </div>
           </div>
           <DialogFooter>
-            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black" onClick={() => setActiveModal(null)}>
+            <Button className="w-full bg-slate-900 hover:bg-black text-white font-black" onClick={() => setActiveModal(null)}>
               Return to Intelligence Dashboard
             </Button>
           </DialogFooter>
@@ -754,17 +754,17 @@ export default function Softskills() {
             <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">{modalData?.name} Profile</DialogTitle>
           </DialogHeader>
           <div className="py-8 space-y-8">
-            <div className="flex items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-2xl text-slate-900">
+            <div className="flex items-center justify-between p-6 bg-slate-900 rounded-2xl text-white">
               <div>
-                <p className="text-[10px] font-black text-blue-600 uppercase mb-1">Workforce Avg</p>
+                <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Workforce Avg</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-6xl font-black tracking-tighter tabular-nums">{modalData?.score}%</span>
-                  <span className={`text-xs font-bold ${modalData?.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className={`text-xs font-bold ${modalData?.trend === 'up' ? 'text-green-400' : 'text-red-400'}`}>
                     {modalData?.trend === 'up' ? '▲' : '▼'} {Math.abs(modalData?.score - (modalData?.benchmark || 0))} pts
                   </span>
                 </div>
               </div>
-              {modalData?.icon && <modalData.icon className="h-16 w-16 text-blue-600/20" />}
+              {modalData?.icon && <modalData.icon className="h-16 w-16 text-blue-500/50" />}
             </div>
 
             <div className="space-y-6">
@@ -842,18 +842,18 @@ export default function Softskills() {
                   </div>
                 ))}
               </div>
-                  <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-blue-600 rounded-lg">
-                  <Zap className="h-4 w-4 text-white" />
-                </div>
-                <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Mandatory Executive Action</h4>
+            </div>
+
+            <div className="p-6 bg-slate-900 rounded-2xl text-white shadow-lg space-y-4">
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-blue-400" />
+                <h4 className="text-xs font-black text-blue-400 uppercase tracking-widest">Mandatory Executive Action</h4>
               </div>
-              <p className="text-lg font-bold text-slate-900 underline decoration-blue-200 underline-offset-4 tracking-tight leading-tight">"{modalData?.action}"</p>
-              <Button className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs tracking-widest">
+              <p className="font-bold underline decoration-blue-500 decoration-2 underline-offset-4 text-lg">"{modalData?.action}"</p>
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs h-12 shadow-lg shadow-blue-900/20">
                 Confirm Execution Protocol
               </Button>
-            </div>          </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
