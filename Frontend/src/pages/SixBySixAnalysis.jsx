@@ -1,203 +1,395 @@
 import React, { useMemo, useState } from "react";
+import {
+  Brain,
+  Users,
+  AlertTriangle,
+  TrendingUp,
+  DollarSign,
+  Zap,
+  Grid,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Brain, Users, AlertTriangle, TrendingUp, ArrowRight, GraduationCap, UserX, Zap, ChevronDown, ChevronUp } from "lucide-react";
 import { employees as centralEmployees, getOverallRisk } from "@/data/mockEmployeeData";
 
-/* ----------------------- MATRIX DEFINITIONS ----------------------- */
+/* ──────────────────────────────── CONFIG ──────────────────────────────── */
 
 const rows = [
-  "Productivity",
-  "Utilization",
-  "Fitment",
-  "Fatigue",
-  "Automation Potential",
-  "Business Criticality",
+  { key: "Productivity", scoreKey: "productivity" },
+  { key: "Utilization",  scoreKey: "utilization"  },
+  { key: "Fitment",      scoreKey: "fitment"       },
+  { key: "Fatigue",      scoreKey: "fatigue"       },
+  { key: "Automation Potential", scoreKey: "automationPotential" },
+  { key: "Business Criticality", scoreKey: "_bc" },
 ];
 
 const cols = ["Critical", "High", "Medium", "Stable", "Strong", "Elite"];
 
 const bucketRanges = [
-  { name: "Critical", min: 0, max: 30 },
-  { name: "High", min: 31, max: 45 },
-  { name: "Medium", min: 46, max: 60 },
-  { name: "Stable", min: 61, max: 75 },
-  { name: "Strong", min: 76, max: 90 },
-  { name: "Elite", min: 91, max: 100 },
+  { name: "Critical", min: 0,  max: 30  },
+  { name: "High",     min: 31, max: 45  },
+  { name: "Medium",   min: 46, max: 60  },
+  { name: "Stable",   min: 61, max: 75  },
+  { name: "Strong",   min: 76, max: 90  },
+  { name: "Elite",    min: 91, max: 100 },
 ];
 
-/* ----------------------- HELPERS ----------------------- */
+/* column header badge colors (left→right: bad→good) */
+const COL_BADGE = {
+  Critical: { bg: "rgba(220,60,60,0.12)",  text: "#C03030", border: "rgba(220,60,60,0.2)"  },
+  High:     { bg: "rgba(220,120,30,0.12)", text: "#B05A10", border: "rgba(220,120,30,0.2)" },
+  Medium:   { bg: "rgba(136,189,242,0.15)", text: "#4E7FA8", border: "rgba(136,189,242,0.3)" },
+  Stable:   { bg: "rgba(106,137,167,0.15)", text: "#3D6585", border: "rgba(106,137,167,0.3)" },
+  Strong:   { bg: "rgba(5, 50, 89, 0.12)",    text: "#2A4255", border: "rgba(5, 50, 89, 0.25)"   },
+  Elite:    { bg: "linear-gradient(135deg,rgba(136,189,242,0.25),rgba(106,137,167,0.2))", text: "#1E3A55", border: "rgba(136,189,242,0.45)" },
+};
+
+/* ──────────────────────────────── HELPERS ──────────────────────────────── */
 
 function bucket(score) {
   return bucketRanges.find(b => score >= b.min && score <= b.max)?.name || "Medium";
 }
 
-function getBusinessCriticality(e) {
-  // Score based on aptitude, role seniority, and performance
+function getBC(e) {
   const roleBonus = e.position.includes("Lead") || e.position.includes("Senior") ? 85 : 60;
-  return (
-    e.scores.aptitude * 0.4 +
-    roleBonus * 0.3 +
-    e.scores.productivity * 0.15 +
-    e.scores.fitment * 0.15
-  );
+  return Math.round(e.scores.aptitude * 0.4 + roleBonus * 0.3 + e.scores.productivity * 0.15 + e.scores.fitment * 0.15);
 }
 
-function aiRecommendation(e) {
-  if (e.scores.fatigue > 75) return "Reduce workload and rebalance tasks.";
-  if (e.scores.fitment < 50) return "Reskill or redeploy to better-fit role.";
+function aiRec(e) {
+  if (e.scores.fatigue > 75)             return "Reduce workload and rebalance tasks.";
+  if (e.scores.fitment < 50)             return "Reskill or redeploy to better-fit role.";
   if (e.scores.automationPotential > 70) return "Target for automation or role redesign.";
-  if (e.scores.aptitude > 85) return "Consider for leadership or strategic projects.";
+  if (e.scores.aptitude > 85)            return "Consider for leadership or strategic projects.";
   return "Maintain and monitor performance.";
 }
 
-/* ----------------------- COMPONENT ----------------------- */
+/* ──────────────────────────────── MAIN PAGE ──────────────────────────────── */
 
 export default function SixBySixAnalysis() {
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(null); // { rowKey, col, list }
 
-  const enriched = useMemo(() => {
-    return centralEmployees.map(e => ({
-      ...e,
-      "Business Criticality": Math.round(getBusinessCriticality(e)),
-    }));
-  }, []);
+  const enriched = useMemo(() =>
+    centralEmployees.map(e => ({ ...e, _bc: getBC(e) })),
+  []);
 
+  /* Build matrix */
   const matrix = useMemo(() => {
     const m = {};
-    rows.forEach(r => cols.forEach(c => (m[`${r}-${c}`] = [])));
-
+    rows.forEach(r => cols.forEach(c => (m[`${r.key}-${c}`] = [])));
     enriched.forEach(e => {
       rows.forEach(r => {
-        let value = 0;
-        if (r === "Business Criticality") {
-          value = e[r];
-        } else {
-          // Map row name to scores key
-          const key = r.toLowerCase().replace(" potential", "Potential");
-          value = e.scores[key] || 0;
-        }
-        const col = bucket(value);
-        m[`${r}-${col}`].push(e);
+        const val = r.scoreKey === "_bc" ? e._bc : (e.scores[r.scoreKey] || 0);
+        const col = bucket(val);
+        m[`${r.key}-${col}`].push(e);
       });
     });
     return m;
   }, [enriched]);
 
+  /* KPIs */
   const kpis = useMemo(() => {
-    const highRisk = centralEmployees.filter(e => getOverallRisk(e) === "High").length;
-    const totalCost = centralEmployees.reduce((sum, e) => sum + e.salary, 0);
-    const costAtRisk = centralEmployees
-      .filter(e => getOverallRisk(e) === "High")
-      .reduce((sum, e) => sum + e.salary, 0);
-    const avgAutomation = centralEmployees.reduce((sum, e) => sum + e.scores.automationPotential, 0) / centralEmployees.length;
-
+    const highRisk   = centralEmployees.filter(e => getOverallRisk(e) === "High");
+    const totalPay   = centralEmployees.reduce((s, e) => s + e.salary, 0);
+    const riskPay    = highRisk.reduce((s, e) => s + e.salary, 0);
+    const avgAuto    = centralEmployees.reduce((s, e) => s + e.scores.automationPotential, 0) / centralEmployees.length;
     return {
-      riskCount: highRisk,
-      costAtRisk: (costAtRisk / 1000).toFixed(0) + "K",
-      totalCost: (totalCost / 1000000).toFixed(1) + "M",
-      autoPct: Math.round(avgAutomation)
+      riskCount: highRisk.length,
+      totalCost: (totalPay / 1_000_000).toFixed(1) + "M",
+      costAtRisk: "$" + (riskPay / 1000).toFixed(0) + "K",
+      autoPct: Math.round(avgAuto) + "%",
     };
   }, []);
 
   return (
-    <div className="p-10 bg-slate-50 min-h-screen space-y-8 font-['Inter']">
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
 
-      {/* HEADER */}
+      {/* ── HEADER ── */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">6×6 Workforce Intelligence Matrix</h1>
-        <p className="text-slate-500 mt-1">AI-driven segmentation of risk, fitment and performance across {centralEmployees.length} nodes</p>
+        <h1 className="page-title">6×6 Workforce Intelligence Matrix</h1>
+        <p style={{ color: "#6B8299", marginTop: "6px", fontSize: "14px" }}>
+          AI-driven segmentation of risk, fitment and performance across {centralEmployees.length} nodes
+        </p>
       </div>
 
-      {/* KPI STRIP */}
-      <div className="grid grid-cols-4 gap-6">
-        <KPI title="Workforce at Risk" value={`${kpis.riskCount} Employees`} />
-        <KPI title="Payroll Exposure" value={`$${kpis.totalCost}`} />
-        <KPI title="Cost at Risk" value={`$${kpis.costAtRisk}`} />
-        <KPI title="Avg Automation Potential" value={`${kpis.autoPct}%`} />
+      {/* ── KPI STRIP ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px" }}>
+        <KPICard title="Workforce at Risk"       value={`${kpis.riskCount} Employees`} icon={AlertTriangle} />
+        <KPICard title="Payroll Exposure"         value={`$${kpis.totalCost}`}          icon={DollarSign}    />
+        <KPICard title="Cost at Risk"             value={kpis.costAtRisk}               icon={TrendingUp}    />
+        <KPICard title="Avg Automation Potential" value={kpis.autoPct}                  icon={Zap}           />
       </div>
 
-      {/* MATRIX */}
-      <Card className="p-8 border-slate-200 shadow-sm bg-white">
-        <div className="grid grid-cols-7 gap-4">
-          <div />
-          {cols.map(c => (
-            <div key={c} className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400 pb-2">
-              {c}
-            </div>
-          ))}
-
-          {rows.map(r => (
-            <React.Fragment key={r}>
-              <div className="text-xs font-bold text-slate-600 flex items-center pr-4">{r}</div>
-              {cols.map(c => {
-                const list = matrix[`${r}-${c}`];
-                const count = list.length;
-                return (
-                  <div
-                    key={c}
-                    onClick={() => count > 0 && setSelected({ r, c, list })}
-                    className={`border rounded-xl p-4 transition-all duration-200 group ${count > 0
-                        ? "bg-blue-50 border-blue-100 cursor-pointer hover:bg-blue-600 hover:border-blue-700 hover:shadow-lg hover:shadow-blue-100"
-                        : "bg-slate-50 border-slate-100 opacity-40 grayscale"
-                      }`}
-                  >
-                    <div className={`text-2xl font-black ${count > 0 ? "text-blue-700 group-hover:text-white" : "text-slate-300"}`}>
-                      {count}
-                    </div>
-                    <div className={`text-[10px] font-bold uppercase tracking-tighter ${count > 0 ? "text-blue-500 group-hover:text-blue-100" : "text-slate-300"}`}>
-                      {count === 1 ? 'Asset' : 'Assets'}
-                    </div>
-                  </div>
-                );
-              })}
-            </React.Fragment>
-          ))}
+      {/* ── MATRIX CARD ── */}
+      <div className="chart-analytics-card" style={{ cursor: "default" }}>
+        <div className="chart-card-header">
+          <span className="chart-card-title">6×6 Workforce Intelligence Matrix</span>
+          <Grid size={14} style={{ color: "#88BDF2" }} />
         </div>
-      </Card>
 
-      {/* MODAL */}
+        <div style={{ padding: "20px 24px 28px" }}>
+          <p style={{ fontSize: "13px", color: "#6B8299", marginBottom: "20px" }}>
+            AI-driven segmentation of risk, fitment and performance across {centralEmployees.length} nodes
+          </p>
+
+          {/* Column headers */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "140px repeat(6, 1fr)",
+            gap: "10px",
+            marginBottom: "10px",
+          }}>
+            <div />
+            {cols.map(c => {
+              const s = COL_BADGE[c];
+              return (
+                <div key={c} style={{
+                  textAlign: "center",
+                  padding: "5px 4px",
+                  borderRadius: "6px",
+                  background: s.bg,
+                  border: `1px solid ${s.border}`,
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: s.text,
+                }}>
+                  {c}
+                </div>
+              );
+            })}
+
+            {/* Rows */}
+            {rows.map(r => (
+              <React.Fragment key={r.key}>
+                {/* Row label */}
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  color: "#053259",
+                  paddingRight: "8px",
+                }}>
+                  {r.key}
+                </div>
+
+                {/* Cells */}
+                {cols.map(c => {
+                  const list  = matrix[`${r.key}-${c}`];
+                  const count = list.length;
+                  const isActive = count > 0;
+                  const bColors = COL_BADGE[c];
+
+                  return (
+                    <div
+                      key={c}
+                      onClick={() => isActive && setSelected({ rowKey: r.key, col: c, list })}
+                      style={{
+                        borderRadius: "10px",
+                        padding: "12px 8px",
+                        border: isActive ? `1.5px solid ${bColors.border}` : "1.5px solid rgba(212,229,247,0.5)",
+                        background: isActive ? bColors.bg : "rgba(242,247,252,0.6)",
+                        cursor: isActive ? "pointer" : "default",
+                        textAlign: "center",
+                        transition: "transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease",
+                        opacity: isActive ? 1 : 0.45,
+                        position: "relative",
+                      }}
+                      onMouseEnter={e => {
+                        if (isActive) {
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                          e.currentTarget.style.boxShadow = "0 8px 20px rgba(106,137,167,0.2)";
+                          e.currentTarget.style.background = `linear-gradient(135deg, #6A89A7 0%, #4E6E8A 100%)`;
+                          e.currentTarget.querySelector(".cell-count").style.color = "#FFFFFF";
+                          e.currentTarget.querySelector(".cell-label").style.color = "rgba(255,255,255,0.75)";
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (isActive) {
+                          e.currentTarget.style.transform = "none";
+                          e.currentTarget.style.boxShadow = "none";
+                          e.currentTarget.style.background = bColors.bg;
+                          e.currentTarget.querySelector(".cell-count").style.color = bColors.text;
+                          e.currentTarget.querySelector(".cell-label").style.color = bColors.text;
+                        }
+                      }}
+                    >
+                      <div
+                        className="cell-count"
+                        style={{
+                          fontSize: "22px",
+                          fontWeight: 800,
+                          lineHeight: 1.1,
+                          color: isActive ? bColors.text : "#C5D4E0",
+                          transition: "color 0.18s",
+                        }}
+                      >
+                        {count}
+                      </div>
+                      <div
+                        className="cell-label"
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                          color: isActive ? bColors.text : "#C5D4E0",
+                          marginTop: "2px",
+                          transition: "color 0.18s",
+                        }}
+                      >
+                        {count === 1 ? "Asset" : "Assets"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── DRILLDOWN MODAL ── */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-slate-50 border-none shadow-2xl p-0">
-          <div className="p-6 bg-white border-b sticky top-0 z-10 flex justify-between items-center">
+        <DialogContent style={{
+          maxWidth: "680px",
+          maxHeight: "85vh",
+          overflowY: "auto",
+          borderRadius: "16px",
+          border: "1px solid #D4E5F7",
+          boxShadow: "0 24px 64px rgba(56,73,89,0.18)",
+          padding: 0,
+        }}>
+          {/* Modal header */}
+          <div style={{
+            padding: "20px 24px",
+            background: "linear-gradient(135deg, #053259 0%, #042949 100%)",
+            borderRadius: "16px 16px 0 0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
             <div>
-              <DialogTitle className="text-xl font-black text-slate-900">{selected?.r} :: {selected?.c}</DialogTitle>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Drilldown Analysis // {selected?.list.length} Records Found</p>
+              <DialogTitle style={{ color: "#FFFFFF", fontSize: "17px", fontWeight: 700, margin: 0 }}>
+                {selected?.rowKey} <span style={{ color: "#88BDF2" }}>·</span> {selected?.col}
+              </DialogTitle>
+              <p style={{ fontSize: "11px", color: "rgba(189,221,252,0.65)", marginTop: "4px", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
+                Drilldown Analysis — {selected?.list.length} {selected?.list.length === 1 ? "record" : "records"} found
+              </p>
             </div>
           </div>
 
-          <div className="p-6 space-y-4">
+          {/* Employee cards */}
+          <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "14px" }}>
             {selected?.list.map((e, i) => (
-              <div key={i} className="p-6 border border-slate-200 rounded-2xl bg-white shadow-sm hover:border-blue-400 transition-colors">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black">
-                      {e.name.split(' ').map(n => n[0]).join('')}
+              <div
+                key={i}
+                style={{
+                  background: "#FFFFFF",
+                  border: "1px solid #D4E5F7",
+                  borderRadius: "12px",
+                  padding: "18px",
+                  boxShadow: "0 2px 10px rgba(56,73,89,0.06)",
+                  transition: "border-color 0.18s, box-shadow 0.18s",
+                }}
+                onMouseEnter={el => {
+                  el.currentTarget.style.borderColor = "#88BDF2";
+                  el.currentTarget.style.boxShadow = "0 6px 18px rgba(136,189,242,0.15)";
+                }}
+                onMouseLeave={el => {
+                  el.currentTarget.style.borderColor = "#D4E5F7";
+                  el.currentTarget.style.boxShadow = "0 2px 10px rgba(56,73,89,0.06)";
+                }}
+              >
+                {/* Employee identity */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "12px",
+                      background: "linear-gradient(135deg, #6A89A7 0%, #053259 100%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#BDDDFC",
+                      fontSize: "13px",
+                      fontWeight: 800,
+                      flexShrink: 0,
+                    }}>
+                      {e.name.split(" ").map(n => n[0]).join("")}
                     </div>
                     <div>
-                      <div className="font-bold text-slate-900 text-lg">{e.name}</div>
-                      <div className="text-xs font-bold text-blue-600 uppercase tracking-wide">{e.position} • {e.department}</div>
+                      <div style={{ fontWeight: 700, color: "#1E2D3D", fontSize: "15px" }}>{e.name}</div>
+                      <div style={{ fontSize: "11px", color: "#6A89A7", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "2px" }}>
+                        {e.position} · {e.department}
+                      </div>
                     </div>
                   </div>
-                  <Badge className="bg-slate-100 text-slate-900 border-slate-200 px-3 py-1 font-black">
-                    BC SCORE: {e["Business Criticality"]}
-                  </Badge>
-                </div>
 
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                  <Metric label="Fitment" value={`${e.scores.fitment}%`} />
-                  <Metric label="Fatigue" value={`${e.scores.fatigue}%`} warning={e.scores.fatigue > 75} />
-                  <Metric label="Automation" value={`${e.scores.automationPotential}%`} />
-                  <Metric label="Aptitude" value={`${e.scores.aptitude}%`} />
-                </div>
-
-                <div className="bg-slate-900 p-4 rounded-xl text-xs font-medium text-white flex gap-3 items-center group">
-                  <div className="p-2 bg-blue-500 rounded-lg group-hover:bg-blue-400 transition-colors">
-                    <Brain className="w-4 h-4" />
+                  <div style={{
+                    background: "rgba(136,189,242,0.15)",
+                    border: "1px solid rgba(136,189,242,0.35)",
+                    borderRadius: "7px",
+                    padding: "4px 10px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    color: "#053259",
+                    letterSpacing: "0.04em",
+                  }}>
+                    BC SCORE: {e._bc}
                   </div>
-                  <span><span className="text-blue-400 font-bold uppercase tracking-widest mr-2">MAYA Recommendation:</span> {aiRecommendation(e)}</span>
+                </div>
+
+                {/* Score metrics */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "14px" }}>
+                  {[
+                    { label: "Fitment",    val: e.scores.fitment,            warn: e.scores.fitment < 50 },
+                    { label: "Fatigue",    val: e.scores.fatigue,            warn: e.scores.fatigue > 75 },
+                    { label: "Automation", val: e.scores.automationPotential, warn: false },
+                    { label: "Aptitude",   val: e.scores.aptitude,           warn: false },
+                  ].map(({ label, val, warn }) => (
+                    <div key={label} style={{
+                      background: warn ? "rgba(220,60,60,0.07)" : "#F2F7FC",
+                      border: warn ? "1px solid rgba(220,60,60,0.2)" : "1px solid #D4E5F7",
+                      borderRadius: "8px",
+                      padding: "10px",
+                    }}>
+                      <div style={{ fontSize: "9.5px", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, color: "#6B8299", marginBottom: "4px" }}>{label}</div>
+                      <div style={{ fontSize: "18px", fontWeight: 800, color: warn ? "#C03030" : "#1E2D3D" }}>{val}%</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* AI Recommendation */}
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  background: "linear-gradient(135deg, #053259 0%, #042949 100%)",
+                  borderRadius: "10px",
+                  padding: "12px 14px",
+                }}>
+                  <div style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "8px",
+                    background: "rgba(136,189,242,0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}>
+                    <Brain size={14} style={{ color: "#88BDF2" }} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", color: "#88BDF2", textTransform: "uppercase" }}>
+                      MAYA Recommendation:{" "}
+                    </span>
+                    <span style={{ fontSize: "13px", color: "rgba(189,221,252,0.9)" }}>{aiRec(e)}</span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -209,22 +401,20 @@ export default function SixBySixAnalysis() {
   );
 }
 
-/* ----------------------- SMALL UI ----------------------- */
+/* ──────────────────────────────── KPI CARD ──────────────────────────────── */
 
-function KPI({ title, value }) {
+function KPICard({ title, value, icon: Icon }) {
   return (
-    <Card className="p-6 border-slate-200 shadow-sm bg-white">
-      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{title}</div>
-      <div className="text-3xl font-black text-slate-900 tracking-tighter">{value}</div>
-    </Card>
-  );
-}
-
-function Metric({ label, value, warning }) {
-  return (
-    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-      <div className="text-[10px] font-black text-slate-400 uppercase tracking-tight mb-1">{label}</div>
-      <div className={`text-lg font-black ${warning ? 'text-red-600' : 'text-slate-900'}`}>{value}</div>
+    <div className="kpi-analytics-card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <p className="kpi-metric-label">{title}</p>
+          <p className="kpi-metric-value" style={{ marginTop: "10px" }}>{value}</p>
+        </div>
+        <div className="kpi-icon-container">
+          <Icon size={20} style={{ color: "#053259" }} />
+        </div>
+      </div>
     </div>
   );
 }

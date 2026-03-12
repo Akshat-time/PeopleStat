@@ -79,16 +79,15 @@ const EmployeeDataForm = () => {
         totalWorkExperienceQualitative: "Between 5 to 8 years",
 
         // 5. Working Hours - Process-wise
-        customerInvoicing: 0,
-        invoicePosting: 0,
-        paymentProcessing: 0,
-        mdmSupport: 0,
-        recordToReport: 0,
-        treasury: 0,
-        taxation: 0,
-        meetings: 0,
-        training: 0,
-        others: 0,
+        hoursInvoicing: 0,
+        hoursCollections: 0,
+        hoursPayments: 0,
+        hoursR2R: 0,
+        hoursTaxation: 0,
+        hoursTreasury: 0,
+        hoursMeetings: 0,
+        hoursTraining: 0,
+        hoursOthers: 0,
 
         // 6. Working Hours - General
         standardWorkingHours: 160,
@@ -116,10 +115,10 @@ const EmployeeDataForm = () => {
         });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        try {
-            const employeeMaster = {
+        console.log("Submitting form (Raw Data):", {
+            employeeMaster: {
                 companyName: formData.companyName,
                 employeeName: formData.employeeName,
                 employeeId: formData.employeeId,
@@ -132,26 +131,23 @@ const EmployeeDataForm = () => {
                 managerName: formData.reportingManager,
                 activeRole: formData.activeRole,
                 employmentType: formData.employmentType
-            };
-
-            const processCharacteristics = {
+            },
+            processCharacteristics: {
                 primaryProcess: formData.primaryProcess,
                 secondaryProcess: formData.secondaryProcess,
                 processName: formData.processName,
                 roleDescription: formData.roleDescription,
                 processCategory: formData.processCategory,
                 consolidationType: formData.consolidationType
-            };
-
-            const experienceCompensation = {
+            },
+            experienceCompensation: {
                 totalExperience: formData.totalExperience,
                 experienceInCurrentRole: formData.experienceInCurrentRole,
                 currentCTC: formData.currentCTC,
                 benchmarkCTC: formData.benchmarkCTC,
                 ctcBenchmark: formData.ctcBenchmark
-            };
-
-            const fitmentResponses = {
+            },
+            fitmentResponses: {
                 pmsRating: formData.pmsRating,
                 complexityOfWork: formData.workComplexity,
                 changeReadyTechSavviness: formData.changeReadiness,
@@ -164,53 +160,29 @@ const EmployeeDataForm = () => {
                 multiplexer: formData.multiplexer,
                 communicativeness: formData.communication,
                 selfMotivated: formData.selfMotivation
-            };
-
-            const workingHours = {
-                customerInvoicing: Number(formData.customerInvoicing) || 0,
-                invoicePosting: Number(formData.invoicePosting) || 0,
-                paymentProcessing: Number(formData.paymentProcessing) || 0,
-                mdmSupport: Number(formData.mdmSupport) || 0,
-                recordToReport: Number(formData.recordToReport) || 0,
-                treasury: Number(formData.treasury) || 0,
-                taxation: Number(formData.taxation) || 0,
-                meetings: Number(formData.meetings) || 0,
-                training: Number(formData.training) || 0,
-                others: Number(formData.others) || 0,
-                standardWorkingHours: Number(formData.standardWorkingHours) || 160,
-                actualWorkingHours: Number(formData.actualWorkingHours) || 160,
-                overtimeHours: Number(formData.overtimeHours) || 0,
+            },
+            workingHours: {
+                hoursInvoicing: formData.hoursInvoicing,
+                hoursCollections: formData.hoursCollections,
+                hoursPayments: formData.hoursPayments,
+                hoursR2R: formData.hoursR2R,
+                hoursTaxation: formData.hoursTaxation,
+                hoursTreasury: formData.hoursTreasury,
+                hoursMeetings: formData.hoursMeetings,
+                hoursTraining: formData.hoursTraining,
+                hoursOthers: formData.hoursOthers,
+                standardWorkingHours: formData.standardWorkingHours,
+                actualWorkingHours: formData.actualWorkingHours,
+                overtimeHours: formData.overtimeHours,
                 weekendWork: formData.weekendWork,
                 multipleRoles: formData.multipleRoles,
                 deadlinePressure: formData.deadlinePressure
-            };
-
-            const payload = {
-                employeeMaster,
-                processCharacteristics,
-                experienceCompensation,
-                fitmentResponses,
-                workingHours
-            };
-
-            console.log("Submitting form (Payload):", payload);
-
-            await api.post(`/employees/update-data`, payload);
-
-            toast({
-                title: "Employee data submitted successfully",
-                description: "Your profile information has been updated.",
-            });
-            
-            navigate("/fatigue");
-        } catch (error) {
-            console.error("Error submitting employee data:", error);
-            toast({
-                title: "Error submitting data",
-                description: error.response?.data?.message || error.message || "Failed to communicate with the server.",
-                variant: "destructive",
-            });
-        }
+            }
+        });
+        toast({
+            title: "Employee data submitted successfully",
+            description: "Your profile information has been updated.",
+        });
     };
 
     const SectionHeader = ({ icon: Icon, title, description }) => (
@@ -592,16 +564,15 @@ const EmployeeDataForm = () => {
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {[
-                            { id: "customerInvoicing", label: "Customer Invoicing" },
-                            { id: "invoicePosting", label: "Invoice Posting" },
-                            { id: "paymentProcessing", label: "Payment Processing" },
-                            { id: "mdmSupport", label: "MDM Support" },
-                            { id: "recordToReport", label: "Record to Report" },
-                            { id: "treasury", label: "Treasury" },
-                            { id: "taxation", label: "Taxation" },
-                            { id: "meetings", label: "Meetings" },
-                            { id: "training", label: "Training" },
-                            { id: "others", label: "Others" },
+                            { id: "hoursInvoicing", label: "Invoicing" },
+                            { id: "hoursCollections", label: "Collections" },
+                            { id: "hoursPayments", label: "Payments" },
+                            { id: "hoursR2R", label: "R2R" },
+                            { id: "hoursTaxation", label: "Taxation" },
+                            { id: "hoursTreasury", label: "Treasury" },
+                            { id: "hoursMeetings", label: "Meetings" },
+                            { id: "hoursTraining", label: "Training" },
+                            { id: "hoursOthers", label: "Others" },
                         ].map((field) => (
                             <div key={field.id} className="space-y-1">
                                 <Label className="text-xs">{field.label}</Label>

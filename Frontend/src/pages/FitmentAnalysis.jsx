@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from "recharts";
-import { TrendingUp, TrendingDown, Search, Download, User, Briefcase, DollarSign, AlertTriangle, ChevronRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Search, Download, User, Users, Briefcase, DollarSign, AlertTriangle, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,10 +54,22 @@ export default function FitmentAnalysis() {
     const costAtRisk = centralEmployees.filter(e => e.scores.fitment < 70).reduce((sum, e) => sum + e.salary, 0);
 
     return [
-      { title: "WORKFORCE FITMENT", value: `${percentFit}%`, subtitle: "Fit + Overfit Combined", trend: "+2.1%", trendUp: true, color: "from-blue-500 to-blue-600" },
-      { title: "MISALIGNED WORKFORCE", value: misalignedCount.toString(), subtitle: "Unfit + Train-to-Fit", trend: "-1.3%", trendUp: false, color: "from-yellow-500 to-yellow-600" },
-      { title: "AT-RISK FTE", value: misalignedCount.toString(), subtitle: "Employees Misaligned", trend: "+8", trendUp: false, color: "from-red-500 to-red-600" },
-      { title: "COST AT RISK", value: `$${(costAtRisk / 1000000).toFixed(1)}M`, subtitle: "Annual Salary @ Risk", trend: "+$0.5M", trendUp: false, color: "from-purple-500 to-purple-600" },
+      { 
+        title: "WORKFORCE FITMENT", value: `${percentFit}%`, subtitle: "Fit + Overfit Combined", trend: "2.1%", trendUp: true, 
+        icon: Users, iconColor: "text-blue-600", iconBg: "bg-blue-50" 
+      },
+      { 
+        title: "MISALIGNED WORKFORCE", value: misalignedCount.toString(), subtitle: "Unfit + Train-to-Fit", trend: "1.3%", trendUp: false, 
+        icon: Briefcase, iconColor: "text-amber-600", iconBg: "bg-amber-50" 
+      },
+      { 
+        title: "AT-RISK FTE", value: misalignedCount.toString(), subtitle: "Employees Misaligned", trend: "8", trendUp: false, 
+        icon: AlertTriangle, iconColor: "text-red-600", iconBg: "bg-red-50" 
+      },
+      { 
+        title: "COST AT RISK", value: `$${(costAtRisk / 1000000).toFixed(1)}M`, subtitle: "Annual Salary @ Risk", trend: "$0.5M", trendUp: false, 
+        icon: DollarSign, iconColor: "text-purple-600", iconBg: "bg-purple-50" 
+      },
     ];
   }, [distribution]);
 
@@ -117,27 +129,38 @@ export default function FitmentAnalysis() {
   const departments = useMemo(() => ["All Departments", ...new Set(centralEmployees.map(e => e.department))], []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 font-['Inter']">
+    <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter']">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Workforce Fitment Intelligence</h1>
-          <p className="text-gray-600 mt-2">Enterprise-grade workforce optimization insights driven by AI Analysis</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Workforce Fitment Intelligence</h1>
+          <p className="text-slate-500 mt-1">Enterprise-grade workforce optimization insights driven by AI Analysis</p>
         </div>
 
         {/* KPI Strip */}
         {!isEmployee && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {kpiData.map((kpi, index) => (
-              <div key={index} className={`bg-gradient-to-r ${kpi.color} rounded-lg p-6 text-white shadow-lg`}>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide">{kpi.title}</h3>
-                  <div className="flex items-center text-sm">
-                    {kpi.trendUp ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
-                    {kpi.trend}
+              <div key={index} className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-blue-300 transition-all relative overflow-hidden group">
+                <div className="flex items-start justify-between relative z-10">
+                  <div className={`p-4 rounded-xl ${kpi.iconBg} group-hover:bg-opacity-80 transition-colors`}>
+                    <kpi.icon className={`h-6 w-6 ${kpi.iconColor}`} />
                   </div>
+                  <Badge className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${kpi.trendUp ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                    {kpi.trendUp ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                    {kpi.trendUp ? '+' : '-'}{kpi.trend}
+                  </Badge>
                 </div>
-                <div className="text-3xl font-bold mb-1">{kpi.value}</div>
-                <p className="text-sm opacity-90">{kpi.subtitle}</p>
+                <div className="mt-8 relative z-10">
+                  <p className="text-slate-500 font-bold text-xs uppercase tracking-widest leading-none mb-1">{kpi.title}</p>
+                  <div className="flex items-end gap-2">
+                    <p className="text-4xl font-black text-slate-900 tracking-tight leading-none">{kpi.value}</p>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2 font-medium">{kpi.subtitle}</p>
+                </div>
+                {/* Subtle background icon */}
+                <div className="absolute right-[-10px] bottom-[-10px] opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
+                  <kpi.icon className="w-24 h-24" />
+                </div>
               </div>
             ))}
           </div>

@@ -3,6 +3,9 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -12,16 +15,6 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -54,11 +47,40 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        // Brand palette (direct access)
+        brand: {
+          accent: "#6D8196",
+          dark: "#4A4A4A",
+          light: "#CBCBCB",
+          highlight: "#FFFFE3",
+          bg: "#F7F8FA",
+          card: "#FFFFFF",
+          border: "#E6E6E6",
+        },
+        sidebar: {
+          DEFAULT: "var(--sidebar)",
+          foreground: "var(--sidebar-foreground)",
+          primary: "var(--sidebar-primary)",
+          "primary-foreground": "var(--sidebar-primary-foreground)",
+          accent: "var(--sidebar-accent)",
+          "accent-foreground": "var(--sidebar-accent-foreground)",
+          border: "var(--sidebar-border)",
+          ring: "var(--sidebar-ring)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "14px",
+        "2xl": "18px",
+      },
+      boxShadow: {
+        "card": "0 6px 18px rgba(0,0,0,0.06)",
+        "card-hover": "0 12px 24px rgba(0,0,0,0.08)",
+        "nav": "0 4px 14px rgba(0,0,0,0.04)",
+        "panel": "0 6px 16px rgba(0,0,0,0.05)",
+        "float": "0 10px 22px rgba(0,0,0,0.25)",
       },
     },
   },

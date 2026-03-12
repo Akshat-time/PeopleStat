@@ -18,7 +18,14 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Mail, Lock, Eye, EyeOff, User } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -32,6 +39,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
+  const [role, setRole] = useState("manager");
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -39,10 +47,21 @@ export default function Login() {
     setError("");
 
     try {
-      await login(usernameOrEmail, password);
+      const loggedInUser = await login(usernameOrEmail, password);
+
+      if (loggedInUser && loggedInUser.role !== role) {
+        // Role mismatch — log out immediately and show error
+        localStorage.removeItem("mock_user");
+        setError(
+          `Wrong role selected. This account is registered as "${loggedInUser.role}". Please select the correct role and try again.`
+        );
+        setIsLoading(false);
+        return;
+      }
+
       toast({
         title: "Login Successful",
-        description: "Welcome back",
+        description: `Welcome back! Redirecting to ${role === "employee" ? "Employee" : "Manager"} Dashboard`,
       });
       setLocation("/");
     } catch (err) {
@@ -181,6 +200,36 @@ export default function Login() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label>Login as</Label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole("manager")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
+                    role === "manager"
+                      ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                      : "border-border text-muted-foreground hover:border-blue-300"
+                  }`}
+                >
+                  <User className="h-4 w-4" />
+                  Manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole("employee")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
+                    role === "employee"
+                      ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                      : "border-border text-muted-foreground hover:border-blue-300"
+                  }`}
+                >
+                  <User className="h-4 w-4" />
+                  Employee
+                </button>
+              </div>
+            </div>
+
             <div className="flex justify-end">
               <button
                 type="button"
@@ -246,3 +295,4 @@ export default function Login() {
     </div>
   );
 }
+

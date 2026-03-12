@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
+import { EmptyState } from "@/components/EmptyState";
 import {
   Users,
   AlertTriangle,
@@ -46,6 +47,20 @@ export default function Employees() {
   const [filters, setFilters] = useState({ department: "", risk: "", fitmentMin: "", fitmentMax: "" });
   const [showAll, setShowAll] = useState(false);
   const { toast } = useToast();
+  const [sortConfig, setSortConfig] = useState({ key: null, dir: "asc" });
+
+  const handleSort = (key) => {
+    setSortConfig(prev =>
+      prev.key === key
+        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: "asc" }
+    );
+  };
+
+  const SortIcon = ({ colKey }) => {
+    if (sortConfig.key !== colKey) return <span style={{ color: "#CBD5E1", fontSize: "10px", marginLeft: "4px" }}>↕</span>;
+    return <span style={{ color: "#2563EB", fontSize: "10px", marginLeft: "4px" }}>{sortConfig.dir === "asc" ? "↑" : "↓"}</span>;
+  };
 
   const kpis = useMemo(() => getWorkforceKPIs(), []);
   const aiSignals = useMemo(() => getAISignals(), []);
@@ -122,6 +137,26 @@ export default function Employees() {
       return matchesSearch && matchesDept && matchesRisk && matchesFitMin && matchesFitMax;
     });
   }, [search, filters]);
+
+  const sortedFiltered = useMemo(() => {
+    if (!sortConfig.key) return filtered;
+    const sorted = [...filtered].sort((a, b) => {
+      let aVal, bVal;
+      switch (sortConfig.key) {
+        case "name":       aVal = a.name; bVal = b.name; break;
+        case "position":   aVal = a.position; bVal = b.position; break;
+        case "department": aVal = a.department; bVal = b.department; break;
+        case "fitment":    aVal = a.scores.fitment; bVal = b.scores.fitment; break;
+        case "productivity": aVal = a.scores.productivity; bVal = b.scores.productivity; break;
+        case "utilization": aVal = a.scores.utilization; bVal = b.scores.utilization; break;
+        default: return 0;
+      }
+      if (aVal < bVal) return sortConfig.dir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.dir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [filtered, sortConfig]);
 
   const getFitmentColor = (score) => {
     if (score >= 85) return "bg-green-100 text-green-800";
@@ -336,48 +371,79 @@ export default function Employees() {
             <table className="w-full text-sm">
               <thead className="bg-[#F8FAFC]">
                 <tr className="border-b border-[#E5E7EB]">
-                  <th className="p-3 text-left font-medium text-[#0F172A]">Employee</th>
-                  <th className="p-3 font-medium text-[#0F172A]">Role</th>
-                  <th className="p-3 font-medium text-[#0F172A]">Department</th>
-                  <th className="p-3 font-medium text-[#0F172A]">Fitment</th>
-                  <th className="p-3 font-medium text-[#0F172A]">Productivity</th>
-                  <th className="p-3 font-medium text-[#0F172A]">Utilization %</th>
-                  <th className="p-3 font-medium text-[#0F172A]">Risk</th>
+                  {[
+                    { key: "name", label: "Employee", align: "left" },
+                    { key: "position", label: "Role", align: "center" },
+                    { key: "department", label: "Department", align: "center" },
+                    { key: "fitment", label: "Fitment", align: "center" },
+                    { key: "productivity", label: "Productivity", align: "center" },
+                    { key: "utilization", label: "Utilization %", align: "center" },
+                    { key: "risk", label: "Risk", align: "center" },
+                  ].map(col => (
+                    <th
+                      key={col.key}
+                      className="p-3 font-medium"
+                      style={{
+                        textAlign: col.align,
+                        cursor: col.key !== "risk" ? "pointer" : "default",
+                        color: sortConfig.key === col.key ? "#2563EB" : "#0F172A",
+                        fontWeight: sortConfig.key === col.key ? 700 : 500,
+                        userSelect: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                      onClick={() => col.key !== "risk" && handleSort(col.key)}
+                    >
+                      {col.label}
+                      {col.key !== "risk" && <SortIcon colKey={col.key} />}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((e) => (
-                  <tr key={e.employeeId} className="border-b border-[#E5E7EB] hover:bg-[#F8FAFC] cursor-pointer h-16" onClick={() => setSelectedEmployee(e)}>
-                    <td className="p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm uppercase">
-                          {e.name.split(' ').map(n => n[0]).join('')}
+                {sortedFiltered.length === 0 ? (
+                  <tr><td colSpan={7}>
+                    <EmptyState
+                      icon={search || filters.department || filters.risk ? "🔍" : "👥"}
+                      title={search || filters.department || filters.risk ? "No results match these filters" : "No employees found"}
+                      description={search || filters.department || filters.risk ? "Try adjusting your search or filters to see more results." : "There are no employees in the system yet."}
+                      actionLabel={search || filters.department || filters.risk ? "Clear Filters" : undefined}
+                      onAction={search || filters.department || filters.risk ? () => { setSearch(""); setFilters({ department: "", risk: "", fitmentMin: "", fitmentMax: "" }); } : undefined}
+                    />
+                  </td></tr>
+                ) : (
+                  sortedFiltered.map((e) => (
+                    <tr key={e.employeeId} className="border-b border-[#E5E7EB] hover:bg-[#F8FAFC] cursor-pointer h-16" onClick={() => setSelectedEmployee(e)}>
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm uppercase">
+                            {e.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div>
+                            <p className="font-medium text-[#0F172A]">{e.name}</p>
+                            <p className="text-xs text-[#64748B]">{e.employeeId}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-[#0F172A]">{e.name}</p>
-                          <p className="text-xs text-[#64748B]">{e.employeeId}</p>
+                      </td>
+                      <td className="p-3 text-[#0F172A]">{e.position}</td>
+                      <td className="p-3 text-[#0F172A]">{e.department}</td>
+                      <td className="p-3">
+                        <Badge className={`font-medium ${getFitmentColor(e.scores.fitment)}`}>
+                          {e.scores.fitment}%
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <Progress value={e.scores.productivity} className="w-20" />
+                          <span className="text-xs">{e.scores.productivity}%</span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-3 text-[#0F172A]">{e.position}</td>
-                    <td className="p-3 text-[#0F172A]">{e.department}</td>
-                    <td className="p-3">
-                      <Badge className={`font-medium ${getFitmentColor(e.scores.fitment)}`}>
-                        {e.scores.fitment}%
-                      </Badge>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <Progress value={e.scores.productivity} className="w-20" />
-                        <span className="text-xs">{e.scores.productivity}%</span>
-                      </div>
-                    </td>
-                    <td className="p-3 font-medium text-[#0F172A]">{e.scores.utilization}%</td>
-                    <td className="p-3">
-                      {getRiskIcon(getOverallRisk(e))}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-3 font-medium text-[#0F172A]">{e.scores.utilization}%</td>
+                      <td className="p-3">
+                        {getRiskIcon(getOverallRisk(e))}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
 

@@ -73,7 +73,7 @@ export default function GapAnalysis() {
     ];
   }, [employeesWithGaps]);
 
-  const COLORS = ["#ef4444", "#f59e0b", "#10b981"];
+  const COLORS = ["#3B82F6", "#F59E0B", "#10B981"]; // Blue, Amber, Green - Refined palette
 
   const getSeverityVariant = (severity) => {
     switch (severity) {
@@ -85,13 +85,13 @@ export default function GapAnalysis() {
   };
 
   return (
-    <div className="space-y-8 p-6 font-['Inter']">
+    <div className="min-h-screen bg-[#F8FAFC] p-6 font-['Inter'] space-y-8">
 
       {/* HEADER */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Gap Analysis</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Gap Analysis</h1>
+          <p className="text-slate-500 mt-1">
             Skill, performance & development gaps across {centralEmployees.length} employees
           </p>
         </div>
@@ -115,41 +115,43 @@ export default function GapAnalysis() {
 
       {/* CHARTS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Gap Count by Employee (Top 10)</CardTitle>
+        <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-900 uppercase tracking-widest">Gap Count by Employee (Top 10)</CardTitle>
           </CardHeader>
-          <CardContent className="h-64">
+          <CardContent className="h-64 pt-6">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="gaps" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10, fontWeight: 700}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10, fontWeight: 700}} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                <Bar dataKey="gaps" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={32} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Gap Severity Distribution</CardTitle>
+        <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-900 uppercase tracking-widest">Gap Severity Distribution</CardTitle>
           </CardHeader>
-          <CardContent className="h-64">
+          <CardContent className="h-64 pt-6">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={donutData}
                   dataKey="value"
-                  innerRadius={60}
+                  innerRadius={65}
                   outerRadius={90}
-                  paddingAngle={5}
+                  paddingAngle={8}
+                  stroke="none"
                 >
                   {donutData.map((_, i) => (
                     <Cell key={i} fill={COLORS[i]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
