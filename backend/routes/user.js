@@ -1,21 +1,18 @@
-const express = require('express');
+import express from 'express';
+import { protect } from '../middleware/auth.js';
+import { 
+  updateProfile, 
+  changePassword, 
+  updateNotifications 
+} from '../controllers/userController.js';
+
 const router = express.Router();
-const auth = require('../middlewares/auth');
-const userController = require('../controllers/userController');
 
-// @route   POST api/user/update-profile
-// @desc    Update user profile details
-// @access  Private
-router.post('/update-profile', auth, userController.updateProfile);
+// All routes are private
+router.use(protect);
 
-// @route   POST api/user/change-password
-// @desc    Change user password
-// @access  Private
-router.post('/change-password', auth, userController.changePassword);
+router.post('/update-profile', updateProfile);
+router.post('/change-password', changePassword);
+router.post('/update-notifications', updateNotifications);
 
-// @route   POST api/user/update-notifications
-// @desc    Update user preferences
-// @access  Private
-router.post('/update-notifications', auth, userController.updateNotifications);
-
-module.exports = router;
+export default router;

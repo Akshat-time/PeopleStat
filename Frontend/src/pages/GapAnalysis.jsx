@@ -302,7 +302,7 @@ function EmployeeDetail({ employee }) {
             <CardTitle className="text-sm font-medium text-purple-800 uppercase">Fatigue Risk</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-purple-600">{employee.scores?.fatigue || employee.fatigue || 0}%</p>
+            <p className="text-3xl font-bold text-purple-600">{employee.fatigueScore || 0}%</p>
             <p className="text-xs text-purple-600/70 mt-1">Stress exposure</p>
           </CardContent>
         </Card>

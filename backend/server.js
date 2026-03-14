@@ -11,6 +11,9 @@ import employeeRoutes from "./routes/employeeRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import optimizationRoutes from "./routes/optimizationRoutes.js";
+import analysisRoutes from "./routes/analysisRoutes.js";
+import employeePortalRoutes from './routes/employeePortalRoutes.js';
+import userRoutes from './routes/user.js';
 
 const app = express();
 
@@ -44,6 +47,9 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/optimization", optimizationRoutes);
+app.use("/api/analysis", analysisRoutes);
+app.use("/api/employee", employeePortalRoutes);
+app.use("/api/user", userRoutes);
 
 // Fallback for old routes or additional ones if needed
 // app.use("/api/ai", aiRoutes); // I'll convert aiController to ESM if needed later

@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { getFitmentBand } from "@/data/mockEmployeeData";
 import { useAuth } from "@/lib/auth";
-import { api } from "@/servicess/api";
+import { api } from "@/services/api";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -243,7 +243,7 @@ export default function FitmentAnalysis() {
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                            {emp.name.split(' ').map(n => n[0]).join('')}
+                            {(emp.name || "UN").split(' ').map(n => n[0]).join('')}
                           </div>
                           <div className="ml-3">
                             <div className="font-medium text-gray-900">{emp.name}</div>
@@ -263,7 +263,7 @@ export default function FitmentAnalysis() {
                           <span>{emp.scores?.productivity || emp.productivity || 0}%</span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-700 font-medium">${emp.salary.toLocaleString()}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-gray-700 font-medium">${(emp.salary || 0).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -278,7 +278,7 @@ export default function FitmentAnalysis() {
                 <div className="space-y-4">
                   <div className="flex items-center space-x-4">
                     <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-xl">
-                      {selectedEmployee.name.split(' ').map(n => n[0]).join('')}
+                      {(selectedEmployee.name || "UN").split(' ').map(n => n[0]).join('')}
                     </div>
                     <div>
                       <h4 className="text-lg font-medium text-gray-900">{selectedEmployee.name}</h4>

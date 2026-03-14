@@ -21,6 +21,7 @@ import {
   Award,
   ChevronRight,
   TrendingUp as TrendingUpIcon,
+  Search,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import {
@@ -55,7 +56,7 @@ import {
   Cell,
 } from "recharts";
 import { employees as initialEmployees } from "@/data/mockEmployeeData";
-import { api } from "@/servicess/api";
+import { api } from "@/services/api";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -66,27 +67,59 @@ export default function WorkforceIntelligence() {
   const [activeDialog, setActiveDialog] = useState(null); // 'skill-gap', 'productivity'
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [deptSearch, setDeptSearch] = useState("");
+  const [deptSort, setDeptSort] = useState({ key: 'headcount', dir: 'desc' });
+  const [summary, setSummary] = useState(null);
   useEffect(() => {
-    const loadEmployees = async () => {
+    const loadData = async () => {
       try {
-        const response = await api.get("/employees");
-        if (response.data.success) {
-          setEmployees(response.data.data);
-        }
+        const [empRes, sumRes] = await Promise.all([
+          api.get("/employees"),
+          api.get("/analysis/summary")
+        ]);
+        if (empRes.data.success) setEmployees(empRes.data.data);
+        if (sumRes.data.success) setSummary(sumRes.data.summary);
       } catch (error) {
-        console.error("Failed to fetch employees:", error);
+        console.error("Failed to fetch workforce data:", error);
         toast({
           title: "Error",
-          description: "Could not load workforce intelligence analytics.",
+          description: "Could not load intelligence analytics.",
           variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
-    loadEmployees();
+    loadData();
   }, [toast]);
+
+  const runAnalysis = async () => {
+    setIsAnalyzing(true);
+    try {
+      const response = await api.post("/analysis/run");
+      if (response.data.success) {
+        toast({
+          title: "Analysis Complete",
+          description: `Successfully analyzed ${response.data.analyzedCount} employees.`,
+        });
+        // Reload employees to get updated scores
+        const empRes = await api.get("/employees");
+        if (empRes.data.success) {
+          setEmployees(empRes.data.data);
+        }
+      }
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      toast({
+        title: "Analysis Failed",
+        description: "An error occurred while running the AI analysis pipeline.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const kpiMetrics = useMemo(() => {
     if (employees.length === 0) return [];
@@ -113,7 +146,7 @@ export default function WorkforceIntelligence() {
       {
         id: "utilization",
         title: "Utilization Rate",
-        value: `${(employees.reduce((sum, e) => sum + (e.scores?.utilization || e.utilization || 0), 0) / employees.length).toFixed(1)}%`,
+        value: `${(employees.reduce((sum, e) => sum + (e.utilization || 0), 0) / employees.length).toFixed(1)}%`,
         change: "+12.8%",
         changeType: "up",
         icon: Activity,
@@ -132,13 +165,13 @@ export default function WorkforceIntelligence() {
   }, [employees]);
 
   const departmentOverview = useMemo(() => {
-    const depts = [...new Set(employees.map(e => e.department))];
-    return depts.map(dept => {
+    const depts = [...new Set(employees.map(e => e.department))].filter(Boolean);
+    let results = depts.map(dept => {
       const emps = employees.filter(e => e.department === dept);
-      const perf = emps.length > 0 ? Math.round(emps.reduce((sum, e) => sum + (e.scores?.productivity || e.productivity || 0), 0) / emps.length) : 0;
-      const utils = emps.length > 0 ? Math.round(emps.reduce((sum, e) => sum + (e.scores?.utilization || e.utilization || 0), 0) / emps.length) : 0;
+      const perf = emps.length > 0 ? Math.round(emps.reduce((sum, e) => sum + (e.productivity || 0), 0) / emps.length) : 0;
+      const utils = emps.length > 0 ? Math.round(emps.reduce((sum, e) => sum + (e.utilization || 0), 0) / emps.length) : 0;
       const salary = emps.reduce((sum, e) => sum + (e.salary || 0), 0);
-      const riskCount = emps.filter(e => (e.scores?.fatigue || e.fatigue || 0) > 75).length;
+      const riskCount = emps.filter(e => (e.fatigueScore || 0) > 75).length;
       return {
         name: dept,
         headcount: emps.length,
@@ -147,13 +180,26 @@ export default function WorkforceIntelligence() {
         salary: salary,
         risk: riskCount > 2 ? "High" : riskCount > 0 ? "Medium" : "Low",
       };
-    }).sort((a, b) => b.performance - a.performance);
-  }, [employees]);
+    });
+
+    // Filter
+    if (deptSearch) {
+      results = results.filter(d => d.name.toLowerCase().includes(deptSearch.toLowerCase()));
+    }
+
+    // Sort
+    return [...results].sort((a, b) => {
+        const factor = deptSort.dir === 'asc' ? 1 : -1;
+        const aVal = a[deptSort.key] || 0;
+        const bVal = b[deptSort.key] || 0;
+        return (aVal - bVal) * factor;
+    });
+  }, [employees, deptSearch, deptSort]);
 
   const predictiveInsights = useMemo(() => {
-    const attrRisk = employees.filter(e => (e.scores?.fatigue || e.fatigue || 0) > 85).length;
-    const promoReady = employees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) > 90 && (e.scores?.productivity || e.productivity || 0) > 85).length;
-    const trainingNeeds = employees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) < 70).length;
+    const attrRisk = employees.filter(e => (e.fatigueScore || 0) > 85).length;
+    const promoReady = employees.filter(e => (e.fitmentScore || 0) > 90 && (e.productivity || 0) > 85).length;
+    const trainingNeeds = employees.filter(e => (e.fitmentScore || 0) < 70).length;
 
     return [
       {
@@ -183,35 +229,18 @@ export default function WorkforceIntelligence() {
     ];
   }, [departmentOverview]);
 
-  const aiInsights = [
-    {
-      type: "critical",
-      title: "Skill Gap Alert",
-      id: "skill-gap",
-      description: `Detected ${predictiveInsights[2].value} requiring immediate training in core competencies.`,
-      impact: "High",
-      action: "View Hiring Plan",
-      icon: AlertTriangle,
-    },
-    {
-      type: "opportunity",
-      title: "Utilization Optimization",
-      id: "utilization-opt",
-      description: "Excess capacity found in Finance; redistribution could save 15% in operational costs.",
-      impact: "Medium",
-      action: "Start Implementation",
-      icon: Zap,
-    },
-    {
-      type: "success",
-      title: "Productivity Milestone",
-      id: "productivity",
-      description: `Overall workforce performance is up by 5.1% compared to last quarter.`,
-      impact: "High",
-      action: "View Details",
-      icon: CheckCircle,
-    },
-  ];
+  const aiInsights = useMemo(() => {
+    if (!summary?.deptInsights) return [];
+    return summary.deptInsights.map((insight, idx) => ({
+        type: insight.status === 'warning' ? 'critical' : insight.status === 'opportunity' ? 'opportunity' : 'success',
+        title: insight.status === 'warning' ? 'Capacity Alert' : 'Operational Insight',
+        id: `insight-${idx}`,
+        description: insight.insight,
+        impact: insight.status === 'warning' ? 'High' : 'Medium',
+        action: insight.status === 'warning' ? 'Rebalance Workload' : 'View Details',
+        icon: insight.status === 'warning' ? AlertTriangle : insight.status === 'opportunity' ? Zap : CheckCircle,
+    })).slice(0, 3);
+  }, [summary]);
 
   const getRiskColor = (risk) => {
     switch (risk) {
@@ -249,9 +278,22 @@ export default function WorkforceIntelligence() {
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
         )}
-        <div className="text-center">
-          <h1 className="text-4xl font-semibold text-[#0F172A] mb-2">Workforce Intelligence</h1>
-          <p className="text-lg text-[#64748B]">AI-powered workforce analytics and optimization insights</p>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="text-left">
+            <h1 className="text-4xl font-semibold text-[#0F172A] mb-2">Workforce Intelligence</h1>
+            <p className="text-lg text-[#64748B]">AI-powered workforce analytics and optimization insights</p>
+          </div>
+          <Button 
+            onClick={runAnalysis} 
+            disabled={isAnalyzing}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-6 rounded-xl shadow-lg shadow-indigo-200 transition-all font-bold"
+          >
+            {isAnalyzing ? (
+              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Analyzing...</>
+            ) : (
+              <><Brain className="mr-2 h-5 w-5" /> Run Intelligence Analysis</>
+            )}
+          </Button>
         </div>
 
         {/* KPI Metrics Grid */}
@@ -329,8 +371,35 @@ export default function WorkforceIntelligence() {
         </div>
 
         {/* Department Overview */}
-        <div>
-          <h2 className="text-2xl font-semibold text-[#0F172A] mb-6">Department Performance Overview</h2>
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h2 className="text-2xl font-semibold text-[#0F172A]">Department Performance Overview</h2>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input 
+                  type="text"
+                  placeholder="Filter departments..."
+                  value={deptSearch}
+                  onChange={(e) => setDeptSearch(e.target.value)}
+                  className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48 md:w-64 bg-white"
+                />
+              </div>
+              <select 
+                value={`${deptSort.key}-${deptSort.dir}`}
+                onChange={(e) => {
+                  const [key, dir] = e.target.value.split('-');
+                  setDeptSort({ key, dir });
+                }}
+                className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+              >
+                <option value="headcount-desc">Headcount (High-Low)</option>
+                <option value="headcount-asc">Headcount (Low-High)</option>
+                <option value="performance-desc">Performance (High-Low)</option>
+                <option value="utilization-desc">Utilization (High-Low)</option>
+              </select>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {departmentOverview.map((dept, index) => (
               <Card
@@ -496,10 +565,10 @@ export default function WorkforceIntelligence() {
                     Overloaded Employees (&gt;90%)
                   </h4>
                   <div className="space-y-2">
-                    {employees.filter(e => (e.scores?.utilization || e.utilization || 0) > 90).map(e => (
+                    {employees.filter(e => (e.utilization || 0) > 90).map(e => (
                       <div key={e.employeeId} className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
                         <span className="text-sm font-medium">{e.name}</span>
-                        <Badge variant="destructive">{e.scores?.utilization || e.utilization || 0}%</Badge>
+                        <Badge variant="destructive">{e.utilization || 0}%</Badge>
                       </div>
                     ))}
                   </div>
@@ -510,10 +579,10 @@ export default function WorkforceIntelligence() {
                     Underutilized Potential (&lt;60%)
                   </h4>
                   <div className="space-y-2">
-                    {employees.filter(e => (e.scores?.utilization || e.utilization || 0) < 60).map(e => (
+                    {employees.filter(e => (e.utilization || 0) < 60).map(e => (
                       <div key={e.employeeId} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                         <span className="text-sm font-medium">{e.name}</span>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">{e.scores?.utilization || e.utilization || 0}%</Badge>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">{e.utilization || 0}%</Badge>
                       </div>
                     ))}
                   </div>
@@ -617,14 +686,14 @@ export default function WorkforceIntelligence() {
                     </div>
                   </div>
                 </div>
-                {employees.filter(e => (e.scores?.fatigue || e.fatigue || 0) > 85).map(e => (
+                {employees.filter(e => (e.fatigueScore || 0) > 85).map(e => (
                   <div key={e.employeeId} className="flex justify-between items-center p-3 border rounded-lg">
                     <div>
                       <p className="font-medium text-sm">{e.name}</p>
                       <Badge className="mt-1 bg-red-100 text-red-800 text-[10px]">{e.position}</Badge>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-red-600">{e.scores?.fatigue || e.fatigue || 0}%</p>
+                      <p className="text-lg font-bold text-red-600">{e.fatigueScore || 0}%</p>
                       <p className="text-[10px] text-slate-400 uppercase font-bold">Fatigue</p>
                     </div>
                   </div>
@@ -638,8 +707,8 @@ export default function WorkforceIntelligence() {
                 <p className="text-sm text-slate-600">High-potential employees ready for internal mobility:</p>
                 {employees.filter(e => (e.scores?.fitment || e.fitmentScore || 0) > 90 && (e.scores?.productivity || e.productivity || 0) > 85).map(e => (
                   <div key={e.employeeId} className="flex gap-4 items-center p-3 border rounded-lg bg-green-50/30">
-                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">
-                      {e.name[0]}
+                    <div className="w-20 h-20 rounded-full bg-blue-50 border-4 border-white flex items-center justify-center text-2xl font-bold text-blue-600 shadow-sm">
+                      {(e.name || "U")[0]}
                     </div>
                     <div className="flex-1">
                       <p className="font-bold text-sm">{e.name}</p>

@@ -201,7 +201,7 @@ export default function Employees() {
     const csvContent = "data:text/csv;charset=utf-8," +
       "Name,Email,Position,Department,Fitment Score,Productivity,Utilization,Salary\n" +
       employees.map(emp =>
-        `${emp.name},${emp.email},${emp.position},${emp.department},${emp.scores?.fitment || emp.fitmentScore || 0},${emp.scores?.productivity || emp.productivity || 0},${emp.scores?.utilization || emp.utilization || 0},${emp.salary}`
+        `${emp.name || 'Unknown'},${emp.email || ''},${emp.position || ''},${emp.department || ''},${emp.scores?.fitment || emp.fitmentScore || 0},${emp.scores?.productivity || emp.productivity || 0},${emp.scores?.utilization || emp.utilization || 0},${emp.salary || 0}`
       ).join("\n");
 
     const encodedUri = encodeURI(csvContent);
@@ -446,7 +446,7 @@ export default function Employees() {
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm uppercase">
-                            {e.name.split(' ').map(n => n[0]).join('')}
+                            {(e.name || "UN").split(' ').map(n => n[0]).join('')}
                           </div>
                           <div>
                             <p className="font-medium text-[#0F172A]">{e.name}</p>

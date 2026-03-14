@@ -5,7 +5,13 @@ import JobDescription from '../models/jobDescriptions.js';
 import cvUploads from '../models/cvUploads.js';
 import ActivityUpload from '../models/activityUploads.js';
 import Employee from '../models/Employee.js';
+import PerformanceRecord from '../models/PerformanceRecord.js';
+import { runAnalysis } from './analysisController.js';
 import { PassThrough } from 'stream';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdf = require('pdf-parse');
+import bcrypt from 'bcryptjs';
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -178,8 +184,53 @@ const parseEmployeeData = (buffer, filename) => {
   } else if (fileExtension === 'json') {
     const jsonString = buffer.toString('utf8');
     return JSON.parse(jsonString);
+  } else if (fileExtension === 'pdf') {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const data = await pdf(buffer);
+        const text = data.text;
+        // Simple heuristic table parser for PDF text
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const results = [];
+        let headers = [];
+        
+        // Basic table detection: look for lines with multiple spaces or tabs
+        lines.forEach((line, index) => {
+          const parts = line.split(/\s{2,}/); // Split by 2+ spaces
+          if (parts.length > 3) {
+            if (headers.length === 0) {
+              headers = parts.map(h => h.toLowerCase().replace(/\s+/g, '_'));
+            } else {
+              const obj = {};
+              parts.forEach((val, i) => {
+                if (headers[i]) obj[headers[i]] = val;
+              });
+              results.push(obj);
+            }
+          }
+        });
+        
+        // Fallback: If no table detected, try to regex extract any "Employee Name: X" etc.
+        if (results.length === 0) {
+           const names = text.match(/Name:\s*([^\n]+)/gi);
+           const emails = text.match(/Email:\s*([^\n]+)/gi);
+           if (names && emails) {
+             names.forEach((n, i) => {
+               results.push({
+                 name: n.replace(/Name:\s*/i, '').trim(),
+                 email: emails[i] ? emails[i].replace(/Email:\s*/i, '').trim() : ''
+               });
+             });
+           }
+        }
+
+        resolve(results);
+      } catch (err) {
+        reject(err);
+      }
+    });
   } else {
-    throw new Error('Unsupported file format. Please upload CSV, Excel (.xlsx/.xls), or JSON files.');
+    throw new Error('Unsupported file format. Please upload CSV, Excel (.xlsx/.xls), JSON, or PDF files.');
   }
 };
 
@@ -210,18 +261,28 @@ export const uploadEmployeeData = async (req, res) => {
           continue;
         }
 
+        const name = emp.name || emp.Name || emp.employee_name || 'New Employee';
+        const rawEmail = (emp.email || emp.Email || emp.employee_email || '').trim().toLowerCase();
+        const email = rawEmail || `${name.toLowerCase().replace(/\s+/g, '')}@employee.com`;
+        
+        // Pass1234 hashed
+        const defaultPassword = await bcrypt.hash('pass1234', 10);
+
         const employeeDoc = await Employee.findOneAndUpdate(
-          { email: emp.email || emp.Email },
+          { email },
           {
             userid,
-            name: emp.name || emp.Name || '',
-            email: emp.email || emp.Email,
+            name,
+            email,
+            password: defaultPassword, // Default password for new/updated employees
+            role: 'employee',
             department: emp.department || emp.Department || '',
+            process_area: emp.process || emp.process_area || emp.Process || '',
             position: emp.position || emp.Position || emp.role || emp.Role || '',
+            band: emp.band || emp.Band || 'D3',
             salary: emp.salary || emp.Salary ? parseInt(emp.salary || emp.Salary) : 0,
-            productivity: emp.productivity || emp.Productivity ? parseInt(emp.productivity || emp.Productivity) : 0,
-            utilization: emp.utilization || emp.Utilization ? parseInt(emp.utilization || emp.Utilization) : 0,
-            fitmentScore: emp.fitmentScore || emp.FitmentScore || emp.fitment_score ? parseFloat(emp.fitmentScore || emp.FitmentScore || emp.fitment_score) : 0,
+            experience_years: emp.experience_years || emp.experience || 0,
+            location: emp.location || emp.Location || 'Remote',
             updatedAt: new Date(),
           },
           {
@@ -231,10 +292,33 @@ export const uploadEmployeeData = async (req, res) => {
           }
         );
 
+        // Map Performance Data if present
+        if (emp.tasks_completed || emp.expected_tasks || emp.overtime_hours || emp.error_rate) {
+          await PerformanceRecord.create({
+            employee_id: employeeDoc._id,
+            tasks_completed: parseInt(emp.tasks_completed || 0),
+            expected_tasks: parseInt(emp.expected_tasks || 1),
+            working_hours: parseFloat(emp.working_hours || 8),
+            overtime_hours: parseFloat(emp.overtime_hours || 0),
+            error_rate: parseFloat(emp.error_rate || 0),
+            department_process: employeeDoc.process_area || 'Default',
+            record_date: new Date()
+          });
+        }
+
         savedEmployees.push(employeeDoc);
       } catch (err) {
         errors.push(`Row ${i + 1}: ${err.message}`);
       }
+    }
+
+    // Trigger AI Analysis Pipeline after data ingestion
+    console.log(`Triggering auto-analysis for ${savedEmployees.length} records...`);
+    try {
+       // Mock req/res for runAnalysis
+       await runAnalysis({ query: {} }, { status: () => ({ json: () => {} }) });
+    } catch (analysisErr) {
+       console.error('Post-upload analysis failed:', analysisErr);
     }
 
     // Get updated stats after upload

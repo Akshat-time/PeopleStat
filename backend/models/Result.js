@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const CategoryScoreSchema = new mongoose.Schema({
   category: String,
@@ -20,4 +20,4 @@ const ResultSchema = new mongoose.Schema({
   completedAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Result', ResultSchema);
+export default mongoose.model('Result', ResultSchema);

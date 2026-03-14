@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Bot } from "lucide-react";
 
 export default function AiEmployeeAssistant() {
+  const [suggestion, setSuggestion] = React.useState(null);
+
+  const handleSuggest = (text) => {
+    setSuggestion(text);
+    // Reset so it can be clicked again
+    setTimeout(() => setSuggestion(null), 100);
+  };
+
   return (
     <div className="min-h-screen bg-blue-50/30 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -48,42 +56,42 @@ export default function AiEmployeeAssistant() {
                 <Button
                   variant="outline"
                   className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
-                  onClick={() => {/* Will be handled by AIChat */}}
+                  onClick={() => handleSuggest("Who is at burnout risk?")}
                 >
                   <span className="text-sm">Who is at burnout risk?</span>
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
-                  onClick={() => {/* Will be handled by AIChat */}}
+                  onClick={() => handleSuggest("Who should be reskilled?")}
                 >
                   <span className="text-sm">Who should be reskilled?</span>
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
-                  onClick={() => {/* Will be handled by AIChat */}}
+                  onClick={() => handleSuggest("Who is underutilized?")}
                 >
                   <span className="text-sm">Who is underutilized?</span>
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
-                  onClick={() => {/* Will be handled by AIChat */}}
+                  onClick={() => handleSuggest("Show me high-risk employees")}
                 >
                   <span className="text-sm">Show me high-risk employees</span>
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
-                  onClick={() => {/* Will be handled by AIChat */}}
+                  onClick={() => handleSuggest("Who are our top performers?")}
                 >
                   <span className="text-sm">Who are our top performers?</span>
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full text-left justify-start h-auto p-3 border-slate-200 hover:bg-blue-50 whitespace-normal"
-                  onClick={() => {/* Will be handled by AIChat */}}
+                  onClick={() => handleSuggest("Tell me about Sarah Johnson")}
                 >
                   <span className="text-sm">Tell me about Sarah Johnson</span>
                 </Button>
@@ -95,7 +103,7 @@ export default function AiEmployeeAssistant() {
           <div className="lg:col-span-1">
             <Card className="h-full border-blue-200 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-0 h-full">
-                <AIChat isFloating={false} />
+                <AIChat isFloating={false} suggestionTrigger={suggestion} />
               </CardContent>
             </Card>
           </div>

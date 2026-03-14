@@ -20,7 +20,7 @@ import { FormField } from "@/components/FormField.jsx";
 
 export default function Register() {
   const [, setLocation] = useLocation();
-  const { register } = useAuth();
+  const { register, user } = useAuth();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -83,6 +83,13 @@ export default function Register() {
       setIsLoading(false);
     }
   };
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (user) {
+      setLocation("/", { replace: true });
+    }
+  }, [user, setLocation]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950">

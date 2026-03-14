@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Loader2
 } from "lucide-react";
-import { api } from "@/servicess/api";
+import { api } from "@/services/api";
 
 /* =================== COMPONENT =================== */
 export default function Optimization() {
@@ -44,9 +44,14 @@ export default function Optimization() {
 
   const totalSavings = useMemo(() => {
     return recommendations.reduce((sum, rec) => {
-      const val = rec.impact.savings.replace('$', '').replace('K', '').replace('M', '');
-      const multiplier = rec.impact.savings.includes('M') ? 1000000 : 1000;
-      return sum + (parseFloat(val) * multiplier);
+      // Handle cases like ₹165.0L
+      const cleanVal = rec.impact.savings.replace(/[^\d.]/g, '');
+      const val = parseFloat(cleanVal) || 0;
+      let multiplier = 1;
+      if (rec.impact.savings.includes('L')) multiplier = 100000;
+      if (rec.impact.savings.includes('M')) multiplier = 1000000;
+      if (rec.impact.savings.includes('K')) multiplier = 1000;
+      return sum + (val * multiplier);
     }, 0);
   }, [recommendations]);
 

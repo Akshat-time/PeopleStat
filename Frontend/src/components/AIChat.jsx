@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useAI } from "@/contexts/AIContext";
 
-const AIChat = ({ isFloating = false, isOpen = true, onToggle }) => {
+const AIChat = ({ isFloating = false, isOpen = true, onToggle, suggestionTrigger }) => {
   const { messages, sendMessage, isLoading, clearChat } = useAI();
   const [inputMessage, setInputMessage] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
@@ -27,6 +27,12 @@ const AIChat = ({ isFloating = false, isOpen = true, onToggle }) => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    if (suggestionTrigger) {
+      setInputMessage(suggestionTrigger);
+    }
+  }, [suggestionTrigger]);
 
   useEffect(() => {
     scrollToBottom();

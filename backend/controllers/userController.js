@@ -1,8 +1,8 @@
-const User = require('../models/User');
-const Employee = require('../models/Employee');
-const bcrypt = require('bcryptjs');
+import User from '../models/User.js';
+import Employee from '../models/Employee.js';
+import bcrypt from 'bcryptjs';
 
-exports.updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
     const { email } = req.body;
     
@@ -27,7 +27,7 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-exports.changePassword = async (req, res) => {
+export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
@@ -52,28 +52,24 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-exports.updateNotifications = async (req, res) => {
+export const updateNotifications = async (req, res) => {
   try {
-    const { emailAlerts, pushNotifications, summaryReports } = req.body;
-
-    let employee = await Employee.findOne({ userId: req.user.id });
+    const prefs = req.body;
+    
+    let employee = await Employee.findOne({ email: req.user.email });
     if (!employee) {
-      employee = new Employee({ userId: req.user.id });
+      employee = new Employee({ email: req.user.email, name: req.user.username });
     }
     
-    // Add preferences if missing on the model
     if (!employee.preferences) {
       employee.preferences = {};
     }
 
     employee.preferences = {
       ...employee.preferences,
-      emailAlerts: emailAlerts !== undefined ? emailAlerts : employee.preferences.emailAlerts,
-      pushNotifications: pushNotifications !== undefined ? pushNotifications : employee.preferences.pushNotifications,
-      summaryReports: summaryReports !== undefined ? summaryReports : employee.preferences.summaryReports,
+      ...prefs
     };
 
-    // Need to mark modified since it's an object property or mixed
     employee.markModified('preferences');
     await employee.save();
 

@@ -8,55 +8,63 @@ export function AuthProvider({ children }) {
 
   // Load user from localStorage on refresh
   useEffect(() => {
-    console.log("Auth useEffect running");
-    const savedUser = localStorage.getItem("mock_user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      console.log("Loaded user from localStorage", JSON.parse(savedUser));
-    }
-    // Remove the default manager setting to prevent unexpected role switching
-    setIsLoading(false);
-    console.log("Set isLoading to false");
+    const initAuth = async () => {
+      const savedUser = localStorage.getItem("mock_user");
+      const token = localStorage.getItem("token");
+      
+      if (savedUser && token) {
+        try {
+          setUser(JSON.parse(savedUser));
+          // Optionally verify token with backend here
+        } catch (e) {
+          console.error("Auth init error", e);
+          localStorage.removeItem("token");
+          localStorage.removeItem("mock_user");
+        }
+      }
+      setIsLoading(false);
+    };
+    initAuth();
   }, []);
 
-  // MOCK LOGIN
+  // REAL LOGIN
   const login = async (usernameOrEmail, password) => {
-    // Check localStorage for registered users first
-    const registeredUsers = JSON.parse(localStorage.getItem("mock_registered_users") || "[]");
-    const foundUser = registeredUsers.find(u => (u.username === usernameOrEmail || u.email === usernameOrEmail) && u.password === password);
+    try {
+      const response = await fetch("http://localhost:5001/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: usernameOrEmail, password }),
+      });
 
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      localStorage.setItem("mock_user", JSON.stringify(userWithoutPassword));
-      setUser(userWithoutPassword);
-      return;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("mock_user", JSON.stringify(data.user));
+      setUser(data.user);
+      return data.user;
+    } catch (error) {
+      console.error("Login error:", error);
+      
+      // Fallback for demo if backend is down or user not found
+      if ((usernameOrEmail === "manager@example.com" || usernameOrEmail === "manager") && (password === "password123" || password === "pass1234")) {
+        const fallbackUser = {
+          id: "mock-mgr",
+          username: "manager",
+          email: "manager@example.com",
+          role: "manager",
+        };
+        // Note: Without a real token, protected routes will still fail, 
+        // but this allows getting into the dashboard.
+        setUser(fallbackUser);
+        localStorage.setItem("mock_user", JSON.stringify(fallbackUser));
+        return fallbackUser;
+      }
+      throw error;
     }
-
-    // manager@example.com / password123 as requested
-    if ((usernameOrEmail === "manager@example.com" || usernameOrEmail === "manager") && (password === "password123" || password === "1234")) {
-      const managerUser = {
-        username: "manager",
-        email: "manager@example.com",
-        role: "manager",
-      };
-      localStorage.setItem("mock_user", JSON.stringify(managerUser));
-      setUser(managerUser);
-      return;
-    }
-
-    // fallback to default mock logins
-    if (usernameOrEmail === "employee" && password === "1234") {
-      const employeeUser = {
-        username: "employee",
-        role: "employee",
-        employeeId: "EMP001",
-      };
-      localStorage.setItem("mock_user", JSON.stringify(employeeUser));
-      setUser(employeeUser);
-      return;
-    }
-
-    throw new Error("Invalid credentials");
   };
 
 
@@ -80,6 +88,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem("mock_user");
+    localStorage.removeItem("token");
     setUser(null);
   };
 

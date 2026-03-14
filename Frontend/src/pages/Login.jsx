@@ -63,13 +63,21 @@ export default function Login() {
         title: "Login Successful",
         description: `Welcome back! Redirecting to ${role === "employee" ? "Employee" : "Manager"} Dashboard`,
       });
-      setLocation("/");
+      setLocation("/", { replace: true });
     } catch (err) {
       setError(err?.message || "Login failed");
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Redirect if already logged in
+  const { user } = useAuth();
+  React.useEffect(() => {
+    if (user) {
+      setLocation("/", { replace: true });
+    }
+  }, [user, setLocation]);
 
   const handleForgotPassword = () => {
     if (!resetEmail) {
@@ -251,10 +259,10 @@ export default function Login() {
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
               <p className="font-bold mb-1">Demo Credentials:</p>
               <div className="flex justify-between">
-                <span>Manager: manager@example.com / password123</span>
+                <span>Manager: manager@peoplestat.com / pass1234</span>
               </div>
               <div className="flex justify-between mt-1">
-                <span>Employee: employee / 1234</span>
+                <span>Employee: employee@peoplestat.com / pass1234</span>
               </div>
             </div>
 

@@ -1,3 +1,4 @@
+// Main App Sidebar component
 import React from "react";
 import {
   LayoutDashboard,
@@ -15,6 +16,8 @@ import {
   ClipboardList,
   Activity,
   Layers,
+  Rocket,
+  Bell,
 } from "lucide-react";
 
 import {
@@ -134,8 +137,13 @@ export function AppSidebar() {
             <SidebarMenu>
               {role === "employee" ? (
                 <>
-                  <NavItem item={{ title: "Skill Overview", url: "/softskills", icon: Brain }} />
-                  <NavItem item={{ title: "Fatigue Status", url: "/fatigue", icon: AlertCircle }} />
+                  <NavItem item={{ title: "My Profile", url: "/employee/profile", icon: Users }} />
+                  <NavItem item={{ title: "My Work & Performance", url: "/employee/work", icon: LayoutDashboard }} />
+                  <NavItem item={{ title: "Skills & Learning", url: "/employee/skills", icon: Brain }} />
+                  <NavItem item={{ title: "Fatigue & Wellbeing", url: "/employee/wellbeing", icon: AlertCircle }} />
+                  <NavItem item={{ title: "Career Growth", url: "/employee/career", icon: Rocket }} />
+                  <NavItem item={{ title: "Notifications", url: "/employee/notifications", icon: Bell }} />
+                  <NavItem item={{ title: "Settings", url: "/settings", icon: Settings }} />
                   <NavItem item={{ title: "Employee Data Form", url: "/employee/data-form", icon: ClipboardList }} />
                 </>
               ) : (

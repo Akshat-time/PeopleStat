@@ -44,6 +44,12 @@ import Register from "./pages/Register.jsx";
 import NotFound from "./pages/not-found.jsx";
 import EmployeeDataForm from "./pages/employee/EmployeeDataForm.jsx";
 import AddEmployee from "./pages/AddEmployee.jsx";
+import MyProfile from "./pages/employee/MyProfile.jsx";
+import MyWorkPerformance from "./pages/employee/MyWorkPerformance.jsx";
+import SkillsLearning from "./pages/employee/SkillsLearning.jsx";
+import FatigueWellbeing from "./pages/employee/FatigueWellbeing.jsx";
+import CareerGrowth from "./pages/employee/CareerGrowth.jsx";
+import EmployeeNotifications from "./pages/employee/EmployeeNotifications.jsx";
 
 
 /* ---------------- PROTECTED ROUTES ---------------- */
@@ -152,6 +158,14 @@ function AppRouter() {
       <Route path="/employee/data-form" component={() => <ProtectedRoute component={EmployeeDataForm} />} />
       <Route path="/upload-data" component={() => <ManagerRoute component={UploadData} />} />
       <Route path="/add-employee" component={() => <ManagerRoute component={AddEmployee} />} />
+      
+      {/* Employee Portal Routes */}
+      <Route path="/employee/profile" component={() => <ProtectedRoute component={MyProfile} />} />
+      <Route path="/employee/work" component={() => <ProtectedRoute component={MyWorkPerformance} />} />
+      <Route path="/employee/skills" component={() => <ProtectedRoute component={SkillsLearning} />} />
+      <Route path="/employee/wellbeing" component={() => <ProtectedRoute component={FatigueWellbeing} />} />
+      <Route path="/employee/career" component={() => <ProtectedRoute component={CareerGrowth} />} />
+      <Route path="/employee/notifications" component={() => <ProtectedRoute component={EmployeeNotifications} />} />
 
       <Route component={NotFound} />
     </Switch>
@@ -162,13 +176,20 @@ function AppRouter() {
 /* ---------------- APP LAYOUT ---------------- */
 
 function AppContent() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [location, navigate] = useLocation();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const isAuthPage = location === "/login" || location === "/register";
 
-  if (isAuthPage) {
+  // Redirect logged-in users away from auth pages
+  useEffect(() => {
+    if (!isLoading && user && isAuthPage) {
+      navigate("/", { replace: true });
+    }
+  }, [user, isAuthPage, isLoading, navigate]);
+
+  if (isAuthPage && !user) {
     return <AppRouter />;
   }
 

@@ -12,8 +12,21 @@ export const addEmployee = async (req, res) => {
 
 export const getEmployees = async (req, res) => {
   try {
-    const data = await Employee.find();
-    res.json({ success: true, data });
+    const employees = await Employee.find();
+    // Add backward compatibility for frontend pages expecting .scores object
+    const formattedData = employees.map(emp => {
+      const obj = emp.toObject();
+      obj.scores = {
+        productivity: obj.productivity || 0,
+        utilization: obj.utilization || 0,
+        fitment: obj.fitmentScore || 0,
+        fatigue: obj.fatigueScore || 0,
+        fitmentScore: obj.fitmentScore || 0,
+        automationPotential: obj.automationPotential || 0
+      };
+      return obj;
+    });
+    res.json({ success: true, data: formattedData });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -92,7 +105,16 @@ export const getEmployeeById = async (req, res) => {
       return res.status(404).json({ error: 'Employee not found' });
     }
     
-    res.json({ success: true, data: employee });
+    const obj = employee.toObject();
+    obj.scores = {
+      productivity: obj.productivity || 0,
+      utilization: obj.utilization || 0,
+      fitment: obj.fitmentScore || 0,
+      fatigue: obj.fatigueScore || 0,
+      fitmentScore: obj.fitmentScore || 0,
+      automationPotential: obj.automationPotential || 0
+    };
+    res.json({ success: true, data: obj });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -136,6 +158,19 @@ export const getEmployeeStats = async (req, res) => {
       });
     }
 
+    const formattedData = employees.map(emp => {
+      const obj = emp.toObject();
+      obj.scores = {
+        productivity: obj.productivity || 0,
+        utilization: obj.utilization || 0,
+        fitment: obj.fitmentScore || 0,
+        fatigue: obj.fatigueScore || 0,
+        fitmentScore: obj.fitmentScore || 0,
+        automationPotential: obj.automationPotential || 0
+      };
+      return obj;
+    });
+
     const totalEmployees = employees.length;
     const avgFitmentScore = employees.reduce((sum, e) => sum + (e.fitmentScore || 0), 0) / totalEmployees;
     const avgProductivity = employees.reduce((sum, e) => sum + (e.productivity || 0), 0) / totalEmployees;
@@ -153,7 +188,7 @@ export const getEmployeeStats = async (req, res) => {
         highPerformers,
         lowUtilization,
       },
-      employees,
+      employees: formattedData,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

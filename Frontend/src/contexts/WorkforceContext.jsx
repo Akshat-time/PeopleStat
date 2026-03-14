@@ -27,11 +27,11 @@ export function WorkforceProvider({ children }) {
               soft: []
             },
             scores: {
-              fitment: emp.scores?.fitment || emp.fitmentScore || Math.floor(Math.random() * 40 + 56),
-              performance: emp.scores?.performance || emp.performanceScore || Math.floor(Math.random() * 40 + 52),
-              productivity: emp.scores?.productivity || emp.productivityScore || Math.floor(Math.random() * 40 + 50),
-              fatigue: emp.scores?.fatigue || Math.floor(Math.random() * 50 + 20),
-              utilization: emp.scores?.utilization || Math.floor(Math.random() * 30 + 70)
+              fitment: emp.fitmentScore || 0,
+              performance: emp.performance === 'High' ? 90 : emp.performance === 'Average' ? 70 : 40,
+              productivity: emp.productivity || 0,
+              fatigue: emp.fatigueScore || 0,
+              utilization: emp.utilization || 0
             }
           }));
           setEmployees(formatted);
